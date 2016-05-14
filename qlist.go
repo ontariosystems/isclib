@@ -24,7 +24,7 @@ import (
 // DOCKER^/ensemble/instances/docker/^2015.2.2.805.0.16216^down, last used Fri May 13 18:12:33 2016^cache.cpf^56772^57772^62972^^
 func qlist(instanceName string) (string, error) {
 	args := []string{"qlist"}
-	if instanceName == "" {
+	if instanceName != "" {
 		args = append(args, instanceName)
 	}
 
