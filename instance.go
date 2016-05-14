@@ -26,7 +26,7 @@ import (
 	"strconv"
 	"strings"
 
-	log log "github.com/Sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 )
 
 type Instance struct {
@@ -131,11 +131,13 @@ func (i *Instance) UpdateFromQList(qlist string) (err error) {
 // This will execute the label MAIN from the properly formatted Cache INT code stored in the codeReader in namespace
 func (i *Instance) Execute(namespace string, codeReader io.Reader) (output string, err error) {
 	elog := log.WithField("namespace", namespace)
+	elog.Debug("Attempting to execute INT code")
 
 	codePath, err := i.genExecutorTmpFile(codeReader)
 	if err != nil {
 		return "", err
 	}
+	elog.WithField("path", codePath).Debug("Acquired temporary file")
 
 	defer os.Remove(codePath)
 
@@ -175,7 +177,7 @@ func qlistStatus(statusAndTime string) (InstanceStatus, string) {
 }
 
 func (i *Instance) genExecutorTmpFile(codeReader io.Reader) (string, error) {
-	tmpFile, err := ioutil.TempFile("", "isclib-instance-exec-")
+	tmpFile, err := ioutil.TempFile("", "isclib-exec-")
 	if err != nil {
 		return "", err
 	}
