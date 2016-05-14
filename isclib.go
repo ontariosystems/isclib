@@ -61,6 +61,10 @@ func LoadInstances() (Instances, error) {
 		instances = append(instances, instance)
 	}
 
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
 	return instances, nil
 }
 
