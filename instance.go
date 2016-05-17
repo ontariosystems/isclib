@@ -152,11 +152,16 @@ func (i *Instance) Execute(namespace string, codeReader io.Reader) (output strin
 	var out bytes.Buffer
 	cmd.Stdout = &out
 
-	cmd.Start()
+	if err := cmd.Start(); err != nil {
+		log.WithError(err).Debug("Failed to start csession")
+		return "", err
+	}
+
 	importString := fmt.Sprintf(codeImportString, namespace, codePath)
 	// TODO: Consider parsing the code and correcting indenting/spacing/etc
 	elog.WithField("importCode", importString).Debug("Attempting to load INT code into buffer")
-	if _, err := in.Write([]byte(importString)); err != nil {
+	if count, err := in.Write([]byte(importString)); err != nil {
+		log.WithError(err).WithField("count", count).Debug("Attempted to write to csession stdin and failed")
 		return "", err
 	}
 	// TODO: Add the required blank line at the end of the int code if it is missing
