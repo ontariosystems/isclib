@@ -1,5 +1,0 @@
-syntax:glob
-pkg
-test_results
-*junit*.xml
-*.coverprofile
