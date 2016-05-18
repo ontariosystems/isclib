@@ -78,9 +78,6 @@ func LoadInstance(name string) (*Instance, error) {
 
 func InstanceFromQList(qlist string) (*Instance, error) {
 	i := new(Instance)
-	// TODO: Allow this to be passed on or configured on the library or... something
-	i.CSessionPath = defaultCSessionPath
-
 	if err := i.UpdateFromQList(qlist); err != nil {
 		return nil, err
 	}

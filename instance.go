@@ -32,6 +32,7 @@ import (
 type Instance struct {
 	// Required to be able to run the executor
 	CSessionPath string `json:"-"`
+	CControlPath string `json:"-"`
 
 	// These values come directly from ccontrol qlist
 	Name            string         `json:"name"`
@@ -84,49 +85,49 @@ func (i *Instance) UpdateFromQList(qlist string) (err error) {
 	return nil
 }
 
-//// TODO: Think about a nozstu flag if there's a reason
-//func (iim *InstanceManager) Start() error {
-//	if iim.Status.Down() {
-//		if output, err := exec.Command(iim.ccontrolPath, "start", iim.instanceName, "quietly").CombinedOutput(); err != nil {
-//			return fmt.Errorf("Error starting instance, error: %s, output: %s", err, output)
-//		}
-//	}
-//
-//	if err := iim.Update(); err != nil {
-//		return fmt.Errorf("Error refreshing instance state during start, error: %s", err)
-//	}
-//
-//	if !iim.Status.Running() {
-//		return fmt.Errorf("Failed to start instance, name: %s, status: %s", iim.instanceName, iim.Status)
-//	}
-//
-//	return nil
-//}
-//
-//func (iim *InstanceManager) Stop() error {
-//	ilog := log.WithField("name", iim.instanceName)
-//	ilog.Debug("Shutting down instance")
-//	if iim.Status.Up() {
-//		args := []string{"stop", iim.instanceName}
-//		if iim.Status.RequiresBypass() {
-//			args = append(args, "bypass")
-//		}
-//		args = append(args, "quietly")
-//		if output, err := exec.Command(iim.ccontrolPath, args...).CombinedOutput(); err != nil {
-//			return fmt.Errorf("Error stopping instance, error: %s, output: %s", err, output)
-//		}
-//	}
-//
-//	if err := iim.Update(); err != nil {
-//		return fmt.Errorf("Error refreshing instance state during stop, error: %s", err)
-//	}
-//
-//	if !iim.Status.Down() {
-//		return fmt.Errorf("Failed to stop instance, name: %s, status: %s", iim.instanceName, iim.Status)
-//	}
-//
-//	return nil
-//}
+// TODO: Think about a nozstu flag if there's a reason
+func (i *Instance) Start() error {
+	if i.Status.Down() {
+		if output, err := exec.Command(i.ccontrolPath(), "start", i.Name, "quietly").CombinedOutput(); err != nil {
+			return fmt.Errorf("Error starting instance, error: %s, output: %s", err, output)
+		}
+	}
+
+	if err := i.Update(); err != nil {
+		return fmt.Errorf("Error refreshing instance state during start, error: %s", err)
+	}
+
+	if !i.Status.Ready() {
+		return fmt.Errorf("Failed to start instance, name: %s, status: %s", i.Name, i.Status)
+	}
+
+	return nil
+}
+
+func (i *Instance) Stop() error {
+	ilog := log.WithField("name", i.Name)
+	ilog.Debug("Shutting down instance")
+	if i.Status.Up() {
+		args := []string{"stop", i.Name}
+		if i.Status.RequiresBypass() {
+			args = append(args, "bypass")
+		}
+		args = append(args, "quietly")
+		if output, err := exec.Command(i.ccontrolPath(), args...).CombinedOutput(); err != nil {
+			return fmt.Errorf("Error stopping instance, error: %s, output: %s", err, output)
+		}
+	}
+
+	if err := i.Update(); err != nil {
+		return fmt.Errorf("Error refreshing instance state during stop, error: %s", err)
+	}
+
+	if !i.Status.Down() {
+		return fmt.Errorf("Failed to stop instance, name: %s, status: %s", i.Name, i.Status)
+	}
+
+	return nil
+}
 
 // This will execute the label MAIN from the properly formatted Cache INT code stored in the codeReader in namespace
 func (i *Instance) Execute(namespace string, codeReader io.Reader) (output string, err error) {
@@ -142,7 +143,7 @@ func (i *Instance) Execute(namespace string, codeReader io.Reader) (output strin
 	defer os.Remove(codePath)
 
 	// Not using -U because it won't work if the user has a startup namespace
-	cmd := exec.Command(i.CSessionPath, i.Name)
+	cmd := exec.Command(i.csessionPath(), i.Name)
 
 	in, err := cmd.StdinPipe()
 	if err != nil {
@@ -194,4 +195,20 @@ func (i *Instance) genExecutorTmpFile(codeReader io.Reader) (string, error) {
 	}
 
 	return tmpFile.Name(), nil
+}
+
+func (i *Instance) csessionPath() string {
+	if i.CSessionPath == "" {
+		return defaultCSessionPath
+	}
+
+	return i.CSessionPath
+}
+
+func (i *Instance) ccontrolPath() string {
+	if i.CControlPath == "" {
+		return defaultCControlPath
+	}
+
+	return i.CControlPath
 }
