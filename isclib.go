@@ -19,11 +19,13 @@ package isclib
 import (
 	"bufio"
 	"bytes"
+	"regexp"
 )
 
 const (
 	defaultCControlPath = "ccontrol"
 	defaultCSessionPath = "csession"
+	cacheParametersFile = "parameters.isc"
 )
 
 const (
@@ -42,6 +44,10 @@ const (
 		`"  code: ",ex.Code,! ` +
 		`do $zutil(4, $job, 99) ` +
 		`}`
+)
+
+var (
+	cacheOwnerRegex = regexp.MustCompile(`^\s*security_settings.manager_user:\s*(.+)$`)
 )
 
 func LoadInstances() (Instances, error) {

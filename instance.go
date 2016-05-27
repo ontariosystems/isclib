@@ -17,12 +17,14 @@ limitations under the License.
 package isclib
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -46,6 +48,9 @@ type Instance struct {
 	JDBCPort        int            `json:"jdbcPort"`
 	State           string         `json:"state"`
 	// There appears to be an additional property after state but I don't know what it is!
+
+	// Values not from ccontrol qlist
+	owner string `json:"owner"`
 }
 
 func (i *Instance) Update() error {
@@ -83,6 +88,36 @@ func (i *Instance) UpdateFromQList(qlist string) (err error) {
 	i.State = qs[8]
 
 	return nil
+}
+
+// TODO: Move this to isclib
+func (i *Instance) DetermineOwner() (string, error) {
+	pfp := filepath.Join(i.Directory, cacheParametersFile)
+	f, err := os.Open(pfp)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	var owner string
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		m := cacheOwnerRegex.FindStringSubmatch(scanner.Text())
+		if len(m) == 2 {
+			owner = m[1]
+			break
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return "", err
+	}
+
+	if owner == "" {
+		return "", fmt.Errorf("Failed to find cache owner in %s", cacheParametersFile)
+	}
+
+	return owner, nil
 }
 
 // TODO: Think about a nozstu flag if there's a reason
