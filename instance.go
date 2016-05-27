@@ -90,7 +90,6 @@ func (i *Instance) UpdateFromQList(qlist string) (err error) {
 	return nil
 }
 
-// TODO: Move this to isclib
 func (i *Instance) DetermineOwner() (string, error) {
 	pfp := filepath.Join(i.Directory, cacheParametersFile)
 	f, err := os.Open(pfp)
