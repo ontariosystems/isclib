@@ -48,9 +48,6 @@ type Instance struct {
 	JDBCPort        int            `json:"jdbcPort"`
 	State           string         `json:"state"`
 	// There appears to be an additional property after state but I don't know what it is!
-
-	// Values not from ccontrol qlist
-	owner string `json:"owner"`
 }
 
 func (i *Instance) Update() error {
