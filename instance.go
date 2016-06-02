@@ -24,9 +24,11 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -48,6 +50,9 @@ type Instance struct {
 	JDBCPort        int            `json:"jdbcPort"`
 	State           string         `json:"state"`
 	// There appears to be an additional property after state but I don't know what it is!
+
+	// Optionally configured after instantiation
+	executionSysProcAttr *syscall.SysProcAttr
 }
 
 func (i *Instance) Update() error {
@@ -160,6 +165,55 @@ func (i *Instance) Stop() error {
 	return nil
 }
 
+func (i *Instance) ExecuteAsCurrentUser() error {
+	log.Debug("Removing execution user")
+	i.executionSysProcAttr = nil
+	return nil
+}
+
+// Configure the instance to perform all Execute commands as the instance's owner.  Only works if the calling program is running as root.
+func (i *Instance) ExecuteAsOwner() error {
+	owner, err := i.DetermineOwner()
+	if err != nil {
+		return err
+	}
+
+	return i.ExecuteAsUser(owner)
+}
+
+// Configure the instance to perform all Execute commands as the provided user.  Only works if the calling program is running as root.
+func (i *Instance) ExecuteAsUser(execUser string) error {
+	u, err := user.Lookup(execUser)
+	if err != nil {
+		return err
+	}
+
+	uid, err := strconv.ParseUint(u.Uid, 10, 32)
+	if err != nil {
+		return err
+	}
+
+	gid, err := strconv.ParseUint(u.Gid, 10, 32)
+	if err != nil {
+		return err
+	}
+
+	log.WithFields(log.Fields{"user": execUser, "uid": u.Uid, "gid": u.Gid}).Debug("Configured to execute as alternate user")
+	i.executionSysProcAttr = &syscall.SysProcAttr{
+		Credential: &syscall.Credential{
+			Uid: uint32(uid),
+			Gid: uint32(gid),
+		},
+	}
+	return nil
+}
+
+func (i *Instance) ExecuteString(namespace string, code string) (output string, err error) {
+	b := bytes.NewReader([]byte(code))
+	return i.Execute(namespace, b)
+}
+
+// TODO: Async standard out from csession
 // This will execute the label MAIN from the properly formatted Cache INT code stored in the codeReader in namespace
 func (i *Instance) Execute(namespace string, codeReader io.Reader) (output string, err error) {
 	elog := log.WithField("namespace", namespace)
@@ -175,6 +229,10 @@ func (i *Instance) Execute(namespace string, codeReader io.Reader) (output strin
 
 	// Not using -U because it won't work if the user has a startup namespace
 	cmd := exec.Command(i.csessionPath(), i.Name)
+
+	if i.executionSysProcAttr != nil {
+		cmd.SysProcAttr = i.executionSysProcAttr
+	}
 
 	in, err := cmd.StdinPipe()
 	if err != nil {
@@ -223,6 +281,15 @@ func (i *Instance) genExecutorTmpFile(codeReader io.Reader) (string, error) {
 
 	if _, err := io.Copy(tmpFile, codeReader); err != nil {
 		return "", nil
+	}
+
+	// Need to set the permissions here or the file will be owned by root and the execution will fail
+	if i.executionSysProcAttr != nil {
+		os.Chown(
+			tmpFile.Name(),
+			int(i.executionSysProcAttr.Credential.Uid),
+			int(i.executionSysProcAttr.Credential.Gid),
+		)
 	}
 
 	return tmpFile.Name(), nil

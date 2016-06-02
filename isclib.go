@@ -19,6 +19,7 @@ package isclib
 import (
 	"bufio"
 	"bytes"
+	"os/exec"
 	"regexp"
 )
 
@@ -49,6 +50,15 @@ const (
 var (
 	cacheOwnerRegex = regexp.MustCompile(`^\s*security_settings.manager_user:\s*(.+)$`)
 )
+
+func ISCExists() bool {
+	// TODO: When the path is configurable, change this
+	if _, err := exec.LookPath(defaultCControlPath); err != nil {
+		return false
+	}
+
+	return true
+}
 
 func LoadInstances() (Instances, error) {
 	qs, err := qlist("")
