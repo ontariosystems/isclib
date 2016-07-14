@@ -51,6 +51,7 @@ var (
 	cacheOwnerRegex = regexp.MustCompile(`^\s*security_settings.manager_user:\s*(.+)$`)
 )
 
+// ISCExists returns a boolean which is true when an ISC product or Caché instance exists on this system.
 func ISCExists() bool {
 	// TODO: When the path is configurable, change this
 	if _, err := exec.LookPath(defaultCControlPath); err != nil {
@@ -60,6 +61,8 @@ func ISCExists() bool {
 	return true
 }
 
+// LoadInstances returns a listing of all Caché/Ensemble instances on this system.
+// It returns the list of instances and any error encountered.
 func LoadInstances() (Instances, error) {
 	qs, err := qlist("")
 	if err != nil {
@@ -84,6 +87,9 @@ func LoadInstances() (Instances, error) {
 	return instances, nil
 }
 
+// LoadInstance retrieves a single instance by name.
+// The instance name is case insensitive.
+// It returns the instance and any error encountered.
 func LoadInstance(name string) (*Instance, error) {
 	q, err := qlist(name)
 	if err != nil {
@@ -92,6 +98,9 @@ func LoadInstance(name string) (*Instance, error) {
 	return InstanceFromQList(q)
 }
 
+// InstanceFromQList will parse the output of a ccontrol qlist into an Instance struct.
+// It expects the results of a ccontrol qlist for a single instance as a string.
+// It returns the parsed instance and any error encountered.
 func InstanceFromQList(qlist string) (*Instance, error) {
 	i := new(Instance)
 	if err := i.UpdateFromQList(qlist); err != nil {

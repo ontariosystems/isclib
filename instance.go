@@ -33,28 +33,30 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+// An Instance represents an instance of Caché/Ensemble on the current system.
 type Instance struct {
 	// Required to be able to run the executor
-	CSessionPath string `json:"-"`
-	CControlPath string `json:"-"`
+	CSessionPath string `json:"-"` // The path to the csession executable
+	CControlPath string `json:"-"` // The path to the ccontrol executable
 
 	// These values come directly from ccontrol qlist
-	Name            string         `json:"name"`
-	Directory       string         `json:"directory"`
-	Version         string         `json:"version"`
-	Status          InstanceStatus `json:"status"`
-	Activity        string         `json:"activity"`
-	CPFFileName     string         `json:"cpfFileName"`
-	SuperServerPort int            `json:"superServerPort"`
-	WebServerPort   int            `json:"webServerPort"`
-	JDBCPort        int            `json:"jdbcPort"`
-	State           string         `json:"state"`
+	Name            string         `json:"name"`            // The name of the instance
+	Directory       string         `json:"directory"`       // The directory in which the instance is installed
+	Version         string         `json:"version"`         // The version of Caché/Ensemble
+	Status          InstanceStatus `json:"status"`          // The status of the instance (down, running, etc.)
+	Activity        string         `json:"activity"`        // The last activity date and time (as a string)
+	CPFFileName     string         `json:"cpfFileName"`     // The name of the CPF file used by this instance at startup
+	SuperServerPort int            `json:"superServerPort"` // The SuperServer port
+	WebServerPort   int            `json:"webServerPort"`   // The internal WebServer port
+	JDBCPort        int            `json:"jdbcPort"`        // The JDBC port
+	State           string         `json:"state"`           // The State of the instance (warn, etc.)
 	// There appears to be an additional property after state but I don't know what it is!
 
-	// Optionally configured after instantiation
-	executionSysProcAttr *syscall.SysProcAttr
+	executionSysProcAttr *syscall.SysProcAttr // This is used internally to allow execution of Caché code as different users
 }
 
+// Update will query the the underlying instance and update the Instance fields with its current state.
+// It returns any error encountered.
 func (i *Instance) Update() error {
 	q, err := qlist(i.Name)
 	if err != nil {
@@ -64,6 +66,8 @@ func (i *Instance) Update() error {
 	return i.UpdateFromQList(q)
 }
 
+// UpdateFromQList will update the current Instance with the values from the qlist string.
+// It returns any error encountered.
 func (i *Instance) UpdateFromQList(qlist string) (err error) {
 	qs := strings.Split(qlist, "^")
 	if len(qs) < 9 {
@@ -92,6 +96,8 @@ func (i *Instance) UpdateFromQList(qlist string) (err error) {
 	return nil
 }
 
+// DetermineOwner will determine the owner of an instance by reading the parameters file associated with this instance.
+// It returns the owner as a string and any error encountered.
 func (i *Instance) DetermineOwner() (string, error) {
 	pfp := filepath.Join(i.Directory, cacheParametersFile)
 	f, err := os.Open(pfp)
@@ -121,8 +127,10 @@ func (i *Instance) DetermineOwner() (string, error) {
 	return owner, nil
 }
 
-// TODO: Think about a nozstu flag if there's a reason
+// Start will ensure that an instance is started.
+// It returns any error encountered when attempting to start the instance.
 func (i *Instance) Start() error {
+	// TODO: Think about a nozstu flag if there's a reason
 	if i.Status.Down() {
 		if output, err := exec.Command(i.ccontrolPath(), "start", i.Name, "quietly").CombinedOutput(); err != nil {
 			return fmt.Errorf("Error starting instance, error: %s, output: %s", err, output)
@@ -140,6 +148,8 @@ func (i *Instance) Start() error {
 	return nil
 }
 
+// Stop will ensure that an instance is started.
+// It returns any error encountered when attempting to stop the instance.
 func (i *Instance) Stop() error {
 	ilog := log.WithField("name", i.Name)
 	ilog.Debug("Shutting down instance")
@@ -165,13 +175,17 @@ func (i *Instance) Stop() error {
 	return nil
 }
 
+// ExecuteAsCurrentUser will configure the instance to execute all future commands as the current user.
+// It returns any error encountered.
 func (i *Instance) ExecuteAsCurrentUser() error {
 	log.Debug("Removing execution user")
 	i.executionSysProcAttr = nil
 	return nil
 }
 
-// Configure the instance to perform all Execute commands as the instance's owner.  Only works if the calling program is running as root.
+// ExecuteAsOwner will  configure the instance to execute all future commands as the instance's owner.
+// This command only functions if the calling program is running as root.
+// It returns any error encountered.
 func (i *Instance) ExecuteAsOwner() error {
 	owner, err := i.DetermineOwner()
 	if err != nil {
@@ -181,8 +195,11 @@ func (i *Instance) ExecuteAsOwner() error {
 	return i.ExecuteAsUser(owner)
 }
 
-// Configure the instance to perform all Execute commands as the provided user.  Only works if the calling program is running as root.
+// ExecuteAsUser will  configure the instance to execute all future commands as the provided user.
+// This command only functions if the calling program is running as root.
+// It returns any error encountered.
 func (i *Instance) ExecuteAsUser(execUser string) error {
+	// TODO: Check for euid 0 instead of just letting it fail in an arbitrary function
 	u, err := user.Lookup(execUser)
 	if err != nil {
 		return err
@@ -208,14 +225,16 @@ func (i *Instance) ExecuteAsUser(execUser string) error {
 	return nil
 }
 
-func (i *Instance) ExecuteString(namespace string, code string) (output string, err error) {
-	b := bytes.NewReader([]byte(code))
-	return i.Execute(namespace, b)
-}
-
-// TODO: Async standard out from csession
-// This will execute the label MAIN from the properly formatted Cache INT code stored in the codeReader in namespace
-func (i *Instance) Execute(namespace string, codeReader io.Reader) (output string, err error) {
+// Execute will read code from the provided io.Reader ane execute it in the provided namespace.
+// The code must be valid Caché ObjectScript INT code obeying all of the correct spacing with a MAIN label as the primary entry point.
+// Valid INT code means (this list is not exhaustive)...
+//   - Labels start at the first character on the line
+//   - Non-labels start with a single space
+//   - You may not have blank lines internal to the code
+//   - You must have a single blank line at the end of the script
+// It returns any output of the execution and any error encountered.
+func (i *Instance) Execute(namespace string, codeReader io.Reader) (string, error) {
+	// TODO: Async standard out from csession
 	elog := log.WithField("namespace", namespace)
 	elog.Debug("Attempting to execute INT code")
 
@@ -260,6 +279,14 @@ func (i *Instance) Execute(namespace string, codeReader io.Reader) (output strin
 	elog.Debug("Waiting on csession to exit")
 	err = cmd.Wait()
 	return out.String(), err
+}
+
+// ExecuteString will execute the provided code in the specified namespace.
+// code must be properly formatted INT code. See the documentation for Execute for more information.
+// It returns any output of the execution and any error encountered.
+func (i *Instance) ExecuteString(namespace string, code string) (string, error) {
+	b := bytes.NewReader([]byte(code))
+	return i.Execute(namespace, b)
 }
 
 func qlistStatus(statusAndTime string) (InstanceStatus, string) {

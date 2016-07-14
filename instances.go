@@ -16,8 +16,11 @@ limitations under the License.
 
 package isclib
 
+// Instances represents a collection of Caché/Ensemble instances
 type Instances []*Instance
 
+// Update will query the underlying instances and update the Instance fields with their current values.
+// It returns any error encountered.
 func (instances Instances) Update() error {
 	for _, instance := range instances {
 		if err := instance.Update(); err != nil {

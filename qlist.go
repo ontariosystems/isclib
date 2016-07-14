@@ -21,8 +21,12 @@ import (
 	"strings"
 )
 
-// DOCKER^/ensemble/instances/docker/^2015.2.2.805.0.16216^down, last used Fri May 13 18:12:33 2016^cache.cpf^56772^57772^62972^^
+// qlist returns the results of executing ccontrol qlist for the specified instance.
+// If instanceName is "", it will return the results of an argumentless qlist (which contains all instances)
+// It returns a string containing the combined standard input and output of the qlist command and any error which occurred.
 func qlist(instanceName string) (string, error) {
+	// Example qlist output...
+	// DOCKER^/ensemble/instances/docker/^2015.2.2.805.0.16216^down, last used Fri May 13 18:12:33 2016^cache.cpf^56772^57772^62972^^
 	args := []string{"qlist"}
 	if instanceName != "" {
 		args = append(args, instanceName)

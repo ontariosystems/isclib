@@ -16,18 +16,30 @@ limitations under the License.
 
 package isclib
 
+// An InstanceStatus represents one of the various status associated with Caché/Ensemble instances.
 type InstanceStatus string
 
 const (
-	InstanceStatusUnknown           InstanceStatus = ""
-	InstanceStatusRunning           InstanceStatus = "running"
-	InstanceStatusInhibited         InstanceStatus = "sign-on inhibited"
+	// InstanceStatusUnknown represents a blank/unknown instance status.
+	InstanceStatusUnknown InstanceStatus = ""
+
+	// InstanceStatusRunning represents a running instance.
+	InstanceStatusRunning InstanceStatus = "running"
+
+	// InstanceStatusInhibited represents an instance that is up but sign-ons have been inhibited due to an issue.
+	InstanceStatusInhibited InstanceStatus = "sign-on inhibited"
+
+	// InstanceStatusPrimaryTransition represents an instance that is up but the primary mirror memeber is being determined.
 	InstanceStatusPrimaryTransition InstanceStatus = "sign-on inhibited:primary transition"
-	InstanceStatusDown              InstanceStatus = "down"
-	InstanceStatusMissingIDS        InstanceStatus = "running on node ? (cache.ids missing)"
+
+	// InstanceStatusDown represents an instance that is down.
+	InstanceStatusDown InstanceStatus = "down"
+
+	// InstanceStatusMissingIDS represents an instance that is up but missing a non-critical (but expected) information file.
+	InstanceStatusMissingIDS InstanceStatus = "running on node ? (cache.ids missing)"
 )
 
-// Returns true when the status is known and can be handled by this code
+// Handled will return true when this status is a known and handled status.
 func (iis InstanceStatus) Handled() bool {
 	switch iis {
 	default:
@@ -42,7 +54,7 @@ func (iis InstanceStatus) Handled() bool {
 	}
 }
 
-// Returns true if Cache is up and in a normal(ish) state
+// Ready will return true if the status represents an acceptably running status.
 func (iis InstanceStatus) Ready() bool {
 	switch iis {
 	default:
@@ -54,7 +66,7 @@ func (iis InstanceStatus) Ready() bool {
 	}
 }
 
-// Returns true if Cache is in a state where it is up but not necessarily cleanly
+// Up will return true if status represents any up status (even unclean states like sign-on inhibited)
 func (iis InstanceStatus) Up() bool {
 	switch iis {
 	default:
@@ -68,7 +80,7 @@ func (iis InstanceStatus) Up() bool {
 	}
 }
 
-// Returns true when the instance is down
+// Down will return true if the instance status represents a fully down instance.
 func (iis InstanceStatus) Down() bool {
 	switch iis {
 	default:
@@ -79,7 +91,7 @@ func (iis InstanceStatus) Down() bool {
 	}
 }
 
-// Returns true when a bypass is required to stop the instance
+// RequiresBypass returns true when a bypass is required to stop the instance
 func (iis InstanceStatus) RequiresBypass() bool {
 	switch iis {
 	default:
