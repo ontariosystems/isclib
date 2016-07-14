@@ -307,16 +307,18 @@ func (i *Instance) genExecutorTmpFile(codeReader io.Reader) (string, error) {
 	defer tmpFile.Close()
 
 	if _, err := io.Copy(tmpFile, codeReader); err != nil {
-		return "", nil
+		return "", err
 	}
 
 	// Need to set the permissions here or the file will be owned by root and the execution will fail
 	if i.executionSysProcAttr != nil {
-		os.Chown(
+		if err := os.Chown(
 			tmpFile.Name(),
 			int(i.executionSysProcAttr.Credential.Uid),
 			int(i.executionSysProcAttr.Credential.Gid),
-		)
+		); err != nil {
+			return "", err
+		}
 	}
 
 	return tmpFile.Name(), nil
