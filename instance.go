@@ -17,7 +17,6 @@ limitations under the License.
 package isclib
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -31,6 +30,13 @@ import (
 	"syscall"
 
 	log "github.com/Sirupsen/logrus"
+)
+
+const (
+	managerUserKey  = "security_settings.manager_user"
+	managerGroupKey = "security_settings.manager_group"
+	ownerUserKey    = "security_settings.cache_user"
+	ownerGroupKey   = "security_settings.cache_group"
 )
 
 // An Instance represents an instance of Caché/Ensemble on the current system.
@@ -96,35 +102,18 @@ func (i *Instance) UpdateFromQList(qlist string) (err error) {
 	return nil
 }
 
-// DetermineOwner will determine the owner of an instance by reading the parameters file associated with this instance.
-// It returns the owner as a string and any error encountered.
-func (i *Instance) DetermineOwner() (string, error) {
-	pfp := filepath.Join(i.Directory, cacheParametersFile)
-	f, err := os.Open(pfp)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
+// DetermineManager will determine the manager of an instance by reading the parameters file associated with this instance.
+// The manager is the primary user of the instance that will be able to perform start/stop operations etc.
+// It returns the manager and manager group as strings and any error encountered.
+func (i *Instance) DetermineManager() (string, string, error) {
+	return i.getUserAndGroupFromParameters("Manager", managerUserKey, managerGroupKey)
+}
 
-	var owner string
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		m := cacheOwnerRegex.FindStringSubmatch(scanner.Text())
-		if len(m) == 2 {
-			owner = m[1]
-			break
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return "", err
-	}
-
-	if owner == "" {
-		return "", fmt.Errorf("Failed to find cache owner in %s", cacheParametersFile)
-	}
-
-	return owner, nil
+// DetermineOwner will determine the owner of an instance by reader the parameters file associate with this instance.
+// The owner is the user which owns the files from the installers and as who most Caché processes will be running.
+// It returns the owner and owner group as strings and any error encountered.
+func (i *Instance) DetermineOwner() (string, string, error) {
+	return i.getUserAndGroupFromParameters("Owner", ownerUserKey, ownerGroupKey)
 }
 
 // Start will ensure that an instance is started.
@@ -183,11 +172,11 @@ func (i *Instance) ExecuteAsCurrentUser() error {
 	return nil
 }
 
-// ExecuteAsOwner will  configure the instance to execute all future commands as the instance's owner.
+// ExecuteAsManager will  configure the instance to execute all future commands as the instance's owner.
 // This command only functions if the calling program is running as root.
 // It returns any error encountered.
-func (i *Instance) ExecuteAsOwner() error {
-	owner, err := i.DetermineOwner()
+func (i *Instance) ExecuteAsManager() error {
+	owner, _, err := i.DetermineManager()
 	if err != nil {
 		return err
 	}
@@ -289,6 +278,19 @@ func (i *Instance) ExecuteString(namespace string, code string) (string, error) 
 	return i.Execute(namespace, b)
 }
 
+// ReadParametersISC will read the current instances parameters ISC file into a simple data structure.
+// It returns the ParametersISC data structure and any error encountered.
+func (i *Instance) ReadParametersISC() (ParametersISC, error) {
+	pfp := filepath.Join(i.Directory, cacheParametersFile)
+	f, err := os.Open(pfp)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	return LoadParametersISC(f)
+}
+
 func qlistStatus(statusAndTime string) (InstanceStatus, string) {
 	s := strings.SplitN(statusAndTime, ",", 2)
 	var a string
@@ -326,7 +328,7 @@ func (i *Instance) genExecutorTmpFile(codeReader io.Reader) (string, error) {
 
 func (i *Instance) csessionPath() string {
 	if i.CSessionPath == "" {
-		return defaultCSessionPath
+		return globalCSessionPath
 	}
 
 	return i.CSessionPath
@@ -334,8 +336,27 @@ func (i *Instance) csessionPath() string {
 
 func (i *Instance) ccontrolPath() string {
 	if i.CControlPath == "" {
-		return defaultCControlPath
+		return globalCControlPath
 	}
 
 	return i.CControlPath
+}
+
+func (i *Instance) getUserAndGroupFromParameters(desc, userKey, groupKey string) (string, string, error) {
+	pi, err := i.ReadParametersISC()
+	if err != nil {
+		return "", "", err
+	}
+
+	owner := pi.Value(userKey)
+	if owner == "" {
+		return "", "", fmt.Errorf("%s user not found in parameters file", desc)
+	}
+
+	group := pi.Value(groupKey)
+	if group == "" {
+		return "", "", fmt.Errorf("%s group not found in parameters file", desc)
+	}
+
+	return owner, group, nil
 }

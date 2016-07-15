@@ -32,8 +32,7 @@ func qlist(instanceName string) (string, error) {
 		args = append(args, instanceName)
 	}
 
-	// TODO: Allow ccontrol path to be set on the package and make this use that value
-	out, err := exec.Command(defaultCControlPath, args...).CombinedOutput()
+	out, err := exec.Command(globalCControlPath, args...).CombinedOutput()
 	if err != nil {
 		return "", err
 	}

@@ -20,7 +20,8 @@ import (
 	"bufio"
 	"bytes"
 	"os/exec"
-	"regexp"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 const (
@@ -48,13 +49,35 @@ const (
 )
 
 var (
-	cacheOwnerRegex = regexp.MustCompile(`^\s*security_settings.manager_user:\s*(.+)$`)
+	globalCControlPath = defaultCControlPath
+	globalCSessionPath = defaultCSessionPath
 )
+
+// CControlPath returns the current path to the ccontrol executable
+func CControlPath() string { return globalCControlPath }
+
+// SetCControlPath sets the current path to the ccontrol executable
+func SetCControlPath(path string) {
+	globalCControlPath = path
+}
+
+// CSessionPath returns the current path to the csession executable
+func CSessionPath() string { return globalCSessionPath }
+
+// SetCSessionPath sets the current path to the csession executable
+func SetCSessionPath(path string) {
+	globalCSessionPath = path
+}
 
 // ISCExists returns a boolean which is true when an ISC product or Caché instance exists on this system.
 func ISCExists() bool {
-	// TODO: When the path is configurable, change this
-	if _, err := exec.LookPath(defaultCControlPath); err != nil {
+	if _, err := exec.LookPath(globalCControlPath); err != nil {
+		log.WithField("ccontrolPath", globalCControlPath).WithError(err).Debug("ccontrol executable not found")
+		return false
+	}
+
+	if _, err := exec.LookPath(globalCSessionPath); err != nil {
+		log.WithField("csessionPath", globalCControlPath).WithError(err).Debug("csession executable not found")
 		return false
 	}
 
