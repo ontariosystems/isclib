@@ -188,7 +188,10 @@ func (i *Instance) ExecuteAsManager() error {
 // This command only functions if the calling program is running as root.
 // It returns any error encountered.
 func (i *Instance) ExecuteAsUser(execUser string) error {
-	// TODO: Check for euid 0 instead of just letting it fail in an arbitrary function
+	if err := ensureUserIsRoot(); err != nil {
+		return err
+	}
+
 	u, err := user.Lookup(execUser)
 	if err != nil {
 		return err
