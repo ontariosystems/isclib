@@ -16,6 +16,8 @@ limitations under the License.
 
 package isclib
 
+// TODO: Consider making a pass through this entire library and using errwrap where appropriate
+
 import (
 	"bufio"
 	"bytes"
