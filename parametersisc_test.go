@@ -35,7 +35,6 @@ var _ = Describe("ParametersISC", func() {
 			r := new(failReader)
 			_, err := isclib.LoadParametersISC(r)
 			It("Returns an error", func() {
-				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("Blam!"))
 			})
 		})
@@ -49,7 +48,6 @@ nope
 `)
 			_, err := isclib.LoadParametersISC(r)
 			It("Returns an error", func() {
-				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("Malformed parameter line: nope"))
 			})
 		})
