@@ -25,6 +25,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -100,6 +101,58 @@ func (i *Instance) UpdateFromQList(qlist string) (err error) {
 	i.State = qs[8]
 
 	return nil
+}
+
+type CacheDat struct {
+	Path       string
+	Permission string
+	Owner      string
+	Group      string
+}
+
+//  DetermineCacheDatInfo will parse the ensemble instance's CPF file for its databases (CACHE.DAT).
+//  It will get the path of the CACHE.DAT file, the permissions on it, and its owning user / group.
+//  The function returns a map of cacheDat structs containing the above information using the name of the database as its key.
+func (i *Instance) DetermineCacheDatInfo() (map[string]CacheDat, error) {
+	cpfPath := filepath.Join(i.Directory, i.CPFFileName)
+	file, err := ioutil.ReadFile(cpfPath)
+	if err != nil {
+		return nil, err
+	}
+	cpfContents := strings.Split(string(file), "\n")
+	var inDbSection bool
+	var cacheDats = make(map[string]CacheDat)
+	//regex to remove the [ ,1,,, etc. ] configuration on CACHE.DAT lines
+	re := regexp.MustCompile("(1+|,+)")
+	for _, line := range cpfContents {
+		line = re.ReplaceAllString(line, "")
+		if inDbSection && strings.TrimSpace(line) == "" {
+			inDbSection = false
+			break
+		}
+		if line == "[Databases]" {
+			inDbSection = true
+			continue
+		}
+		if inDbSection {
+			splitLine := strings.Split(line, "=")
+			cacheDatPath := splitLine[1] + "CACHE.DAT"
+			datFileInfo, err := os.Stat(cacheDatPath)
+			if err != nil {
+				return nil, err
+			}
+			fileOwner, err := user.LookupId(fmt.Sprint(datFileInfo.Sys().(*syscall.Stat_t).Uid))
+			if err != nil {
+				return nil, err
+			}
+			fileGroup, err := user.LookupGroupId(fmt.Sprint(datFileInfo.Sys().(*syscall.Stat_t).Gid))
+			if err != nil {
+				return nil, err
+			}
+			cacheDats[splitLine[0]] = CacheDat{Path: splitLine[1], Permission: datFileInfo.Mode().String(), Owner: fileOwner.Username, Group: fileGroup.Name}
+		}
+	}
+	return cacheDats, nil
 }
 
 // DetermineManager will determine the manager of an instance by reading the parameters file associated with this instance.
