@@ -17,6 +17,7 @@ limitations under the License.
 package isclib
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -115,17 +116,19 @@ type CacheDat struct {
 //  The function returns a map of cacheDat structs containing the above information using the name of the database as its key.
 func (i *Instance) DetermineCacheDatInfo() (map[string]CacheDat, error) {
 	cpfPath := filepath.Join(i.Directory, i.CPFFileName)
-	file, err := ioutil.ReadFile(cpfPath)
+	file, err := os.Open(cpfPath)
 	if err != nil {
 		return nil, err
 	}
-	cpfContents := strings.Split(string(file), "\n")
+	defer file.Close()
 	var inDbSection bool
 	var cacheDats = make(map[string]CacheDat)
 	//regex to remove the [ ,1,,, etc. ] configuration on CACHE.DAT lines
 	re := regexp.MustCompile("(1+|,+)")
-	for _, line := range cpfContents {
-		line = re.ReplaceAllString(line, "")
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := re.ReplaceAllString(scanner.Text(), "")
 		if inDbSection && strings.TrimSpace(line) == "" {
 			break
 		}
@@ -151,6 +154,11 @@ func (i *Instance) DetermineCacheDatInfo() (map[string]CacheDat, error) {
 			cacheDats[splitLine[0]] = CacheDat{Path: splitLine[1], Permission: datFileInfo.Mode().String(), Owner: fileOwner.Username, Group: fileGroup.Name}
 		}
 	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
 	return cacheDats, nil
 }
 
