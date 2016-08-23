@@ -109,6 +109,7 @@ type CacheDat struct {
 	Permission string
 	Owner      string
 	Group      string
+	Exists     bool
 }
 
 //  DetermineCacheDatInfo will parse the ensemble instance's CPF file for its databases (CACHE.DAT).
@@ -139,19 +140,28 @@ func (i *Instance) DetermineCacheDatInfo() (map[string]CacheDat, error) {
 		if inDbSection {
 			splitLine := strings.Split(line, "=")
 			cacheDatPath := splitLine[1] + "CACHE.DAT"
+			cacheDat := CacheDat{Path: splitLine[1], Exists: true}
 			datFileInfo, err := os.Stat(cacheDatPath)
 			if err != nil {
-				return nil, err
+				if os.IsNotExist(err) {
+					cacheDat.Exists = false
+				} else {
+					return nil, err
+				}
+			} else {
+				fileOwner, err := user.LookupId(fmt.Sprint(datFileInfo.Sys().(*syscall.Stat_t).Uid))
+				if err != nil {
+					return nil, err
+				}
+				cacheDat.Owner = fileOwner.Username
+				fileGroup, err := user.LookupGroupId(fmt.Sprint(datFileInfo.Sys().(*syscall.Stat_t).Gid))
+				if err != nil {
+					return nil, err
+				}
+				cacheDat.Group = fileGroup.Name
+				cacheDat.Permission = datFileInfo.Mode().String()
 			}
-			fileOwner, err := user.LookupId(fmt.Sprint(datFileInfo.Sys().(*syscall.Stat_t).Uid))
-			if err != nil {
-				return nil, err
-			}
-			fileGroup, err := user.LookupGroupId(fmt.Sprint(datFileInfo.Sys().(*syscall.Stat_t).Gid))
-			if err != nil {
-				return nil, err
-			}
-			cacheDats[splitLine[0]] = CacheDat{Path: splitLine[1], Permission: datFileInfo.Mode().String(), Owner: fileOwner.Username, Group: fileGroup.Name}
+			cacheDats[splitLine[0]] = cacheDat
 		}
 	}
 
