@@ -127,7 +127,6 @@ func (i *Instance) DetermineCacheDatInfo() (map[string]CacheDat, error) {
 	for _, line := range cpfContents {
 		line = re.ReplaceAllString(line, "")
 		if inDbSection && strings.TrimSpace(line) == "" {
-			inDbSection = false
 			break
 		}
 		if line == "[Databases]" {
