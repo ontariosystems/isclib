@@ -130,14 +130,11 @@ func (i *Instance) DetermineCacheDatInfo() (map[string]CacheDat, error) {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := re.ReplaceAllString(scanner.Text(), "")
-		if inDbSection && strings.TrimSpace(line) == "" {
-			break
-		}
-		if line == "[Databases]" {
-			inDbSection = true
-			continue
-		}
+
 		if inDbSection {
+			if strings.TrimSpace(line) == "" {
+				break
+			}
 			splitLine := strings.Split(line, "=")
 			cacheDatPath := splitLine[1] + "CACHE.DAT"
 			cacheDat := CacheDat{Path: splitLine[1], Exists: true}
@@ -162,6 +159,8 @@ func (i *Instance) DetermineCacheDatInfo() (map[string]CacheDat, error) {
 				cacheDat.Permission = datFileInfo.Mode().String()
 			}
 			cacheDats[splitLine[0]] = cacheDat
+		} else if line == "[Databases]" {
+			inDbSection = true
 		}
 	}
 
