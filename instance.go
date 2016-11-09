@@ -295,13 +295,18 @@ func (i *Instance) ExecuteAsUser(execUser string) error {
 //   - You must have a single blank line at the end of the script
 // It returns any output of the execution and any error encountered.
 func (i *Instance) Execute(namespace string, codeReader io.Reader) (string, error) {
-	// TODO: Async standard out from csession
+	var out bytes.Buffer
+	err := i.ExecuteWithOutput(namespace, codeReader, &out)
+	return out.String(), err
+}
+
+func (i *Instance) ExecuteWithOutput(namespace string, codeReader io.Reader, out io.Writer) error {
 	elog := log.WithField("namespace", namespace)
 	elog.Debug("Attempting to execute INT code")
 
 	codePath, err := i.genExecutorTmpFile(codeReader)
 	if err != nil {
-		return "", err
+		return err
 	}
 	elog.WithField("path", codePath).Debug("Acquired temporary file")
 
@@ -316,15 +321,14 @@ func (i *Instance) Execute(namespace string, codeReader io.Reader) (string, erro
 
 	in, err := cmd.StdinPipe()
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	var out bytes.Buffer
-	cmd.Stdout = &out
+	cmd.Stdout = out
 
 	if err := cmd.Start(); err != nil {
 		log.WithError(err).Debug("Failed to start csession")
-		return "", err
+		return err
 	}
 
 	importString := fmt.Sprintf(codeImportString, namespace, codePath)
@@ -332,14 +336,13 @@ func (i *Instance) Execute(namespace string, codeReader io.Reader) (string, erro
 	elog.WithField("importCode", importString).Debug("Attempting to load INT code into buffer")
 	if count, err := in.Write([]byte(importString)); err != nil {
 		log.WithError(err).WithField("count", count).Debug("Attempted to write to csession stdin and failed")
-		return "", err
+		return err
 	}
 	// TODO: Add the required blank line at the end of the int code if it is missing
 	in.Close()
 
 	elog.Debug("Waiting on csession to exit")
-	err = cmd.Wait()
-	return out.String(), err
+	return cmd.Wait()
 }
 
 // ExecuteString will execute the provided code in the specified namespace.
