@@ -19,6 +19,7 @@ package isclib
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -35,10 +36,15 @@ import (
 )
 
 const (
-	managerUserKey  = "security_settings.manager_user"
-	managerGroupKey = "security_settings.manager_group"
-	ownerUserKey    = "security_settings.cache_user"
-	ownerGroupKey   = "security_settings.cache_group"
+	managerUserKey          = "security_settings.manager_user"
+	managerGroupKey         = "security_settings.manager_group"
+	ownerUserKey            = "security_settings.cache_user"
+	ownerGroupKey           = "security_settings.cache_group"
+	DefaultImportQualifiers = "/compile/keepsource/expand/multicompile"
+)
+
+var (
+	LoadFailedError = errors.New("Load did not appear to finish successfully.")
 )
 
 // An Instance represents an instance of Caché/Ensemble on the current system.
@@ -286,6 +292,45 @@ func (i *Instance) ExecuteAsUser(execUser string) error {
 	return nil
 }
 
+// ImportSource will import the source specified using a glob pattern into Caché with the provided qualifiers.
+// sourcePathGlob only allows a subset of glob patterns.  It must be in the format /p/a/t/h/**/*.xml
+//   /p/a/t/h/ is the import directory
+//   you have have at most one **
+//   after the ** you must have only a file pattern
+//   To import a single file it would be /a/b/c/file.xml
+// qualifiers are standard Caché import/compile qualifiers, if none are provided a default set will be used
+// It returns any output of the import and any error encountered.
+func (i *Instance) ImportSource(namespace, sourcePathGlob string, qualifiers ...string) (string, error) {
+	qstr := strings.TrimSpace(strings.Join(qualifiers, ""))
+	if qstr == "" {
+		qstr = DefaultImportQualifiers
+	}
+
+	id, err := NewImportDescription(sourcePathGlob, qstr)
+	if err != nil {
+		return "", err
+	}
+
+	cmd := id.String()
+	log.WithFields(log.Fields{
+		"namespace":  namespace,
+		"path":       sourcePathGlob,
+		"qualifiers": qstr,
+		"command":    cmd,
+	}).Debug("Attempting to import source")
+	o, err := i.getCSessionCommand(namespace, cmd).CombinedOutput()
+	out := string(o)
+	if err != nil {
+		return out, err
+	}
+
+	if !strings.Contains(out, "Load finished successfully.") {
+		return out, LoadFailedError
+	}
+
+	return out, nil
+}
+
 // Execute will read code from the provided io.Reader ane execute it in the provided namespace.
 // The code must be valid Caché ObjectScript INT code obeying all of the correct spacing with a MAIN label as the primary entry point.
 // Valid INT code means (this list is not exhaustive)...
@@ -312,13 +357,8 @@ func (i *Instance) ExecuteWithOutput(namespace string, codeReader io.Reader, out
 
 	defer os.Remove(codePath)
 
-	// Not using -U because it won't work if the user has a startup namespace
-	cmd := exec.Command(i.csessionPath(), i.Name)
-
-	if i.executionSysProcAttr != nil {
-		cmd.SysProcAttr = i.executionSysProcAttr
-	}
-
+	// Not using namespace in case the user has a startup namespace
+	cmd := i.getCSessionCommand("", "")
 	in, err := cmd.StdinPipe()
 	if err != nil {
 		return err
@@ -343,6 +383,24 @@ func (i *Instance) ExecuteWithOutput(namespace string, codeReader io.Reader, out
 
 	elog.Debug("Waiting on csession to exit")
 	return cmd.Wait()
+}
+
+func (i *Instance) getCSessionCommand(namespace, command string) *exec.Cmd {
+	args := []string{i.Name}
+	if namespace != "" {
+		args = append(args, "-U", namespace)
+	}
+
+	if command != "" {
+		args = append(args, command)
+	}
+
+	cmd := exec.Command(i.csessionPath(), args...)
+	if i.executionSysProcAttr != nil {
+		cmd.SysProcAttr = i.executionSysProcAttr
+	}
+
+	return cmd
 }
 
 // ExecuteString will execute the provided code in the specified namespace.
