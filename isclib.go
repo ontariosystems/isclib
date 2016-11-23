@@ -51,8 +51,9 @@ const (
 )
 
 var (
-	globalCControlPath = defaultCControlPath
-	globalCSessionPath = defaultCSessionPath
+	globalCControlPath        = defaultCControlPath
+	globalCSessionPath        = defaultCSessionPath
+	executeTemporaryDirectory = "" // Default is system temp directory
 )
 
 // CControlPath returns the current path to the ccontrol executable
@@ -69,6 +70,18 @@ func CSessionPath() string { return globalCSessionPath }
 // SetCSessionPath sets the current path to the csession executable
 func SetCSessionPath(path string) {
 	globalCSessionPath = path
+}
+
+// ExecuteTemporaryDirectory returns the directory where temporary files for ObjectScript execution will be placed.
+// "" means the system default temp directory.
+func ExecuteTemporaryDirectory() string {
+	return executeTemporaryDirectory
+}
+
+// SetExecuteTemporaryDirectory sets the directory where temporary files for ObjectScript execution will be placed.
+// Passing "" will result in using the system default temp directory.
+func SetExecuteTemporaryDirectory(path string) {
+	executeTemporaryDirectory = path
 }
 
 // ISCExists returns a boolean which is true when an ISC product or Caché instance exists on this system.

@@ -379,8 +379,8 @@ func (i *Instance) ExecuteWithOutput(namespace string, codeReader io.Reader, out
 		return err
 	}
 	// TODO: Add the required blank line at the end of the int code if it is missing
-	in.Close()
 
+	in.Close()
 	elog.Debug("Waiting on csession to exit")
 	return cmd.Wait()
 }
@@ -434,7 +434,7 @@ func qlistStatus(statusAndTime string) (InstanceStatus, string) {
 }
 
 func (i *Instance) genExecutorTmpFile(codeReader io.Reader) (string, error) {
-	tmpFile, err := ioutil.TempFile("", "isclib-exec-")
+	tmpFile, err := ioutil.TempFile(executeTemporaryDirectory, "isclib-exec-")
 	if err != nil {
 		return "", err
 	}
