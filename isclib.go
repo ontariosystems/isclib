@@ -34,8 +34,8 @@ const (
 
 const (
 	importXMLHeader = `<?xml version="1.0" encoding="UTF-8"?>
-<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2015.2.2 (Build 805_0_16216U)" ts="2016-10-12 00:21:29">
-<Routine name="%s" type="MAC" languagemode="0" timestamp="64203,939.593696"><![CDATA[
+<Export generator="Cache" version="25">
+<Routine name="%s" type="MAC" languagemode="0"><![CDATA[
 EnsLibMain() public {
 	try {
 		do MAIN
