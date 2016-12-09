@@ -33,21 +33,24 @@ const (
 )
 
 const (
-	// This is the string which will be piped into a csession command to load the actual code to be executed into an in-memory buffer from a file.
-	codeImportString = `try { ` +
-		`znspace "%s" ` +
-		`set f="%s" ` +
-		`open f:"R":1 ` +
-		`if $test { use f zload  close f do MAIN halt } ` +
-		`else { do $zutil(4, $job, 98) } } ` +
-		`catch ex { ` +
-		`do BACK^%%ETN ` +
-		`use 0 ` +
-		`write !,"Exception: ",ex.DisplayString(),!,` +
-		`"  name: ",ex.Name,!,` +
-		`"  code: ",ex.Code,! ` +
-		`do $zutil(4, $job, 99) ` +
-		`}`
+	importXMLHeader = `<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25">
+<Routine name="%s" type="MAC" languagemode="0"><![CDATA[
+EnsLibMain() public {
+	try {
+		do MAIN
+	} catch ex {
+		do BACK^%%ETN
+		use 0
+		write !,"Exception: ",ex.DisplayString(),!,"  name: ",ex.Name,!,"  code: ",ex.Code,!
+		do $zutil(4, $job, 99)
+	}
+}
+
+`
+	importXMLFooter = `
+]]></Routine>
+</Export>`
 )
 
 var (
