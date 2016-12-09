@@ -32,6 +32,8 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/hashicorp/errwrap"
+
 	log "github.com/Sirupsen/logrus"
 )
 
@@ -357,30 +359,21 @@ func (i *Instance) ExecuteWithOutput(namespace string, codeReader io.Reader, out
 
 	defer os.Remove(codePath)
 
-	// Not using namespace in case the user has a startup namespace
-	cmd := i.getCSessionCommand("", "")
-	in, err := cmd.StdinPipe()
-	if err != nil {
+	if _, err := i.ImportSource(namespace, codePath, "/compile", "/keepsource"); err != nil {
 		return err
 	}
 
-	cmd.Stdout = out
+	routineName := filepath.Base(codePath)
+	defer i.removeTempRoutine(namespace, routineName)
 
+	cmd := i.getCSessionCommand(namespace, "EnsLibMain^"+routineName)
+
+	cmd.Stdout = out
 	if err := cmd.Start(); err != nil {
 		log.WithError(err).Debug("Failed to start csession")
 		return err
 	}
 
-	importString := fmt.Sprintf(codeImportString, namespace, codePath)
-	// TODO: Consider parsing the code and correcting indenting/spacing/etc
-	elog.WithField("importCode", importString).Debug("Attempting to load INT code into buffer")
-	if count, err := in.Write([]byte(importString)); err != nil {
-		log.WithError(err).WithField("count", count).Debug("Attempted to write to csession stdin and failed")
-		return err
-	}
-	// TODO: Add the required blank line at the end of the int code if it is missing
-
-	in.Close()
 	elog.Debug("Waiting on csession to exit")
 	return cmd.Wait()
 }
@@ -433,16 +426,25 @@ func qlistStatus(statusAndTime string) (InstanceStatus, string) {
 	return InstanceStatus(strings.ToLower(s[0])), a
 }
 
-func (i *Instance) genExecutorTmpFile(codeReader io.Reader) (string, error) {
-	tmpFile, err := ioutil.TempFile(executeTemporaryDirectory, "isclib-exec-")
+func (i *Instance) genExecutorTmpFile(codeReader io.Reader) (path string, error error) {
+	tmpFile, err := ioutil.TempFile(executeTemporaryDirectory, "ELEXEC")
 	if err != nil {
 		return "", err
 	}
 
 	defer tmpFile.Close()
 
+	routineName := filepath.Base(tmpFile.Name())
+	if _, err := tmpFile.Write([]byte(fmt.Sprintf(importXMLHeader, routineName))); err != nil {
+		return "", errwrap.Wrapf("Failed to write XML header: {{err}}", err)
+	}
+
 	if _, err := io.Copy(tmpFile, codeReader); err != nil {
 		return "", err
+	}
+
+	if _, err := tmpFile.Write([]byte(importXMLFooter)); err != nil {
+		return "", errwrap.Wrapf("Failed to write XML footer: {{err}}", err)
 	}
 
 	// Need to set the permissions here or the file will be owned by root and the execution will fail
@@ -452,7 +454,7 @@ func (i *Instance) genExecutorTmpFile(codeReader io.Reader) (string, error) {
 			int(i.executionSysProcAttr.Credential.Uid),
 			int(i.executionSysProcAttr.Credential.Gid),
 		); err != nil {
-			return "", err
+			return "", errwrap.Wrapf("Failed to set permissions on import file: {{err}}", err)
 		}
 	}
 
@@ -492,4 +494,27 @@ func (i *Instance) getUserAndGroupFromParameters(desc, userKey, groupKey string)
 	}
 
 	return owner, group, nil
+}
+
+func (i *Instance) removeTempRoutine(namespace, path string) error {
+	routineName := filepath.Base(path)
+	l := log.WithFields(log.Fields{
+		"instance":  i.Name,
+		"namespace": namespace,
+		"routine":   routineName,
+	})
+
+	l.Debug("Removing temporary routine")
+	cmd := i.getCSessionCommand(namespace, fmt.Sprintf(`##class(%%Routine).Delete("%s",0,1)`, routineName))
+	if err := cmd.Start(); err != nil {
+		l.WithError(err).Error("Failed to start deletion")
+		return errwrap.Wrapf("Failed to start routine deletion: {{err}}", err)
+	}
+
+	if err := cmd.Wait(); err != nil {
+		l.WithError(err).Error("Failed to delete routine")
+		return errwrap.Wrapf("Failed to execute routine deletion: {{err}}", err)
+	}
+
+	return nil
 }
