@@ -43,6 +43,7 @@ EnsLibMain() public {
 		do BACK^%%ETN
 		use 0
 		write !,"Exception: ",ex.DisplayString(),!,"  name: ",ex.Name,!,"  code: ",ex.Code,!
+		do $zutil(4, $job, 99)
 	}
 }
 
