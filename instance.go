@@ -320,7 +320,7 @@ func (i *Instance) ImportSource(namespace, sourcePathGlob string, qualifiers ...
 		"qualifiers": qstr,
 		"command":    cmd,
 	}).Debug("Attempting to import source")
-	o, err := i.getCSessionCommand(namespace, cmd).CombinedOutput()
+	o, err := i.GetCSessionCommand(namespace, cmd).CombinedOutput()
 	out := string(o)
 	if err != nil {
 		return out, err
@@ -366,7 +366,7 @@ func (i *Instance) ExecuteWithOutput(namespace string, codeReader io.Reader, out
 	routineName := filepath.Base(codePath)
 	defer i.removeTempRoutine(namespace, routineName)
 
-	cmd := i.getCSessionCommand(namespace, "EnsLibMain^"+routineName)
+	cmd := i.GetCSessionCommand(namespace, "EnsLibMain^"+routineName)
 
 	cmd.Stdout = out
 	if err := cmd.Start(); err != nil {
@@ -378,7 +378,10 @@ func (i *Instance) ExecuteWithOutput(namespace string, codeReader io.Reader, out
 	return cmd.Wait()
 }
 
-func (i *Instance) getCSessionCommand(namespace, command string) *exec.Cmd {
+// GetCSessionCommand will return a properly configured instance of exec.Cmd to
+// run the provided command (properly formatted for csession) in the provided
+// namespace.
+func (i *Instance) GetCSessionCommand(namespace, command string) *exec.Cmd {
 	args := []string{i.Name}
 	if namespace != "" {
 		args = append(args, "-U", namespace)
@@ -505,7 +508,7 @@ func (i *Instance) removeTempRoutine(namespace, path string) error {
 	})
 
 	l.Debug("Removing temporary routine")
-	cmd := i.getCSessionCommand(namespace, fmt.Sprintf(`##class(%%Routine).Delete("%s",0,1)`, routineName))
+	cmd := i.GetCSessionCommand(namespace, fmt.Sprintf(`##class(%%Routine).Delete("%s",0,1)`, routineName))
 	if err := cmd.Start(); err != nil {
 		l.WithError(err).Error("Failed to start deletion")
 		return errwrap.Wrapf("Failed to start routine deletion: {{err}}", err)
