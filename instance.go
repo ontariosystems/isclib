@@ -378,6 +378,9 @@ func (i *Instance) ExecuteWithOutput(namespace string, codeReader io.Reader, out
 	return cmd.Wait()
 }
 
+// GetCSessionCommand will return a properly configured instance of exec.Cmd to
+// run the provided command (properly formatted for csession) in the provided
+// namespace.
 func (i *Instance) GetCSessionCommand(namespace, command string) *exec.Cmd {
 	args := []string{i.Name}
 	if namespace != "" {
