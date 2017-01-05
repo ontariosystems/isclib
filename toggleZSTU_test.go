@@ -1,5 +1,5 @@
 /*
-Copyright 2016 Ontario Systems
+Copyright 2017 Ontario Systems
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package isclib_test
 
 import (
 	"path/filepath"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -29,22 +30,34 @@ var _ = Describe("ToggleZSTU", func() {
 	var dir = "/test/cache"
 	var name = "cache.cpf"
 	var path = filepath.Join(dir, name)
-	var content = `
-	some line that isn't ZSTU
-	another line
-	ZSTU=1
-	another line
-	`
+
+	var zstu1 = "some line that isn't ZSTU\nanother line\nZSTU=1\nanother line\n"
+	var zstu0 = "some line that isn't ZSTU\nanother line\nZSTU=0\nanother line\n"
+
 	BeforeEach(func() {
 		FS = new(afero.MemMapFs)
 		FS.MkdirAll(dir, 0755)
-		afero.WriteFile(FS, path, []byte(content), 0644)
+		afero.WriteFile(FS, path, []byte(zstu1), 0644)
 	})
 
 	Describe("Open cpf file for reading", func() {
 		It("toggles ZSTU line to ZSTU=0", func() {
 			err := ToggleZSTU(path, false)
 			Expect(err).NotTo(HaveOccurred())
+			cpfFile, err := afero.ReadFile(FS, path)
+			Expect(err).NotTo(HaveOccurred())
+			cpfSlice := strings.Split(string(cpfFile[:]), "\n")
+			Expect(cpfSlice[2]).To(Equal("ZSTU=0"))
+		})
+
+		It("toggles ZSTU line to ZSTU=1", func() {
+			afero.WriteFile(FS, path, []byte(zstu0), 0644)
+			err := ToggleZSTU(path, true)
+			Expect(err).NotTo(HaveOccurred())
+			cpfFile, err := afero.ReadFile(FS, path)
+			Expect(err).NotTo(HaveOccurred())
+			cpfSlice := strings.Split(string(cpfFile[:]), "\n")
+			Expect(cpfSlice[2]).To(Equal("ZSTU=1"))
 		})
 
 	})

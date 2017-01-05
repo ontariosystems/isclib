@@ -1,5 +1,5 @@
 /*
-Copyright 2016 Ontario Systems
+Copyright 2017 Ontario Systems
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -82,12 +82,12 @@ func parseAndWriteCPF(cpfFile io.Reader, tmpFile io.Writer, onOrOff bool) error 
 		line := scanner.Text()
 		if line == "ZSTU=1" || line == "ZSTU=0" {
 			if onOrOff {
-				io.WriteString(tmpFile, "ZSTU=1")
+				io.WriteString(tmpFile, "ZSTU=1\n")
 			} else {
-				io.WriteString(tmpFile, "ZSTU=0")
+				io.WriteString(tmpFile, "ZSTU=0\n")
 			}
 		} else {
-			io.WriteString(tmpFile, scanner.Text())
+			io.WriteString(tmpFile, scanner.Text()+"\n")
 		}
 	}
 	if err := scanner.Err(); err != nil {
