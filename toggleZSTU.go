@@ -36,8 +36,6 @@ func ToggleZSTU(cpfFilePath string, onOrOff bool) error {
 		return err
 	}
 
-	defer FS.Remove(tmpFile.Name())
-
 	err = parseAndWriteCPF(cpfFile, tmpFile, onOrOff)
 	if err != nil {
 		return err
@@ -72,6 +70,8 @@ func ToggleZSTU(cpfFilePath string, onOrOff bool) error {
 	if err := newCpfFile.Close(); err != nil {
 		return err
 	}
+
+	FS.Remove(tmpFile.Name())
 
 	return nil
 }
