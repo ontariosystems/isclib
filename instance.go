@@ -1,5 +1,5 @@
 /*
-Copyright 2016 Ontario Systems
+Copyright 2017 Ontario Systems
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -86,8 +86,8 @@ func (i *Instance) Update() error {
 // It returns any error encountered.
 func (i *Instance) UpdateFromQList(qlist string) (err error) {
 	qs := strings.Split(qlist, "^")
-	if len(qs) < 9 {
-		return fmt.Errorf("Insufficient pieces in qlist, need at least 9, qlist: %s", qlist)
+	if len(qs) < 8 {
+		return fmt.Errorf("Insufficient pieces in qlist, need at least 8, qlist: %s", qlist)
 	}
 
 	if i.SuperServerPort, err = strconv.Atoi(qs[5]); err != nil {
@@ -107,7 +107,11 @@ func (i *Instance) UpdateFromQList(qlist string) (err error) {
 	i.Version = qs[2]
 	i.Status, i.Activity = qlistStatus(qs[3])
 	i.CPFFileName = qs[4]
-	i.State = qs[8]
+	if len(qs) == 8 {
+		i.State = "ok"
+	} else {
+		i.State = qs[8]
+	}
 
 	return nil
 }
