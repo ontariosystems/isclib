@@ -18,7 +18,6 @@ package isclib_test
 
 import (
 	"path/filepath"
-	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -27,39 +26,58 @@ import (
 )
 
 var _ = Describe("ToggleZSTU", func() {
-	var dir = "/test/cache"
-	var name = "cache.cpf"
-	var path = filepath.Join(dir, name)
-
-	var zstu1 = "some line that isn't ZSTU\nanother line\nZSTU=1\nanother line\n"
-	var zstu0 = "some line that isn't ZSTU\nanother line\nZSTU=0\nanother line\n"
+	const (
+		path  = "/test/cache/cache.cpf"
+		zstu0 = "some line that isn't ZSTU\nanother line\nZSTU=0\nanother line\n"
+		zstu1 = "some line that isn't ZSTU\nanother line\nZSTU=1\nanother line\n"
+	)
 
 	BeforeEach(func() {
 		FS = new(afero.MemMapFs)
-		FS.MkdirAll(dir, 0755)
-		afero.WriteFile(FS, path, []byte(zstu1), 0644)
+		FS.MkdirAll(filepath.Dir(path), 0755)
 	})
 
-	Describe("Open cpf file for reading", func() {
-		It("toggles ZSTU line to ZSTU=0", func() {
-			err := ToggleZSTU(path, false)
-			Expect(err).NotTo(HaveOccurred())
-			cpfFile, err := afero.ReadFile(FS, path)
-			Expect(err).NotTo(HaveOccurred())
-			cpfSlice := strings.Split(string(cpfFile[:]), "\n")
-			Expect(cpfSlice[2]).To(Equal("ZSTU=0"))
+	Context("with ZSTU=0", func() {
+		BeforeEach(func() {
+			Expect(afero.WriteFile(FS, path, []byte(zstu0), 0644)).To(Succeed())
 		})
 
-		It("toggles ZSTU line to ZSTU=1", func() {
-			afero.WriteFile(FS, path, []byte(zstu0), 0644)
-			err := ToggleZSTU(path, true)
-			Expect(err).NotTo(HaveOccurred())
-			cpfFile, err := afero.ReadFile(FS, path)
-			Expect(err).NotTo(HaveOccurred())
-			cpfSlice := strings.Split(string(cpfFile[:]), "\n")
-			Expect(cpfSlice[2]).To(Equal("ZSTU=1"))
+		Context("when toggling to true", func() {
+			It("toggles ZSTU line to ZSTU=1", func() {
+				Expect(ToggleZSTU(path, true)).To(BeFalse())
+				Expect(afero.ReadFile(FS, path)).To(WithTransform(toStr, Equal(zstu1)))
+			})
 		})
 
+		Context("when toggling to false", func() {
+			It("toggles ZSTU line to ZSTU=0", func() {
+				Expect(ToggleZSTU(path, false)).To(BeFalse())
+				Expect(afero.ReadFile(FS, path)).To(WithTransform(toStr, Equal(zstu0)))
+			})
+		})
 	})
 
+	Context("with ZTU=1", func() {
+		BeforeEach(func() {
+			Expect(afero.WriteFile(FS, path, []byte(zstu1), 0644)).To(Succeed())
+		})
+
+		Context("when toggling to false", func() {
+			It("toggles ZSTU line to ZSTU=0", func() {
+				Expect(ToggleZSTU(path, false)).To(BeTrue())
+				Expect(afero.ReadFile(FS, path)).To(WithTransform(toStr, Equal(zstu0)))
+			})
+		})
+
+		Context("when toggling to true", func() {
+			It("toggles ZSTU line to ZSTU=1", func() {
+				Expect(ToggleZSTU(path, true)).To(BeTrue())
+				Expect(afero.ReadFile(FS, path)).To(WithTransform(toStr, Equal(zstu1)))
+			})
+		})
+	})
 })
+
+func toStr(b []byte) string {
+	return string(b)
+}
