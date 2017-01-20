@@ -25,62 +25,67 @@ import (
 
 var FS = afero.NewOsFs()
 
-func ToggleZSTU(cpfFilePath string, onOrOff bool) error {
+func ToggleZSTU(cpfFilePath string, onOrOff bool) (originalValue bool, err error) {
 	cpfFile, err := FS.Open(cpfFilePath)
 	if err != nil {
-		return err
+		return originalValue, err
 	}
 
 	tmpFile, err := afero.TempFile(FS, "", "cpftemp")
 	if err != nil {
-		return err
+		return originalValue, err
 	}
 
-	err = parseAndWriteCPF(cpfFile, tmpFile, onOrOff)
+	originalValue, err = parseAndWriteCPF(cpfFile, tmpFile, onOrOff)
 	if err != nil {
-		return err
+		return originalValue, err
 	}
 
 	if err := cpfFile.Close(); err != nil {
-		return err
+		return originalValue, err
 	}
 
 	if err := tmpFile.Close(); err != nil {
-		return err
+		return originalValue, err
 	}
 
 	cpfFile, err = FS.Create(cpfFilePath)
 	if err != nil {
-		return err
+		return originalValue, err
 	}
 
 	newCpfFile, err := FS.Open(tmpFile.Name())
 	if err != nil {
-		return err
+		return originalValue, err
 	}
 
 	if _, err = io.Copy(cpfFile, newCpfFile); err != nil {
-		return err
+		return originalValue, err
 	}
 
 	if err := cpfFile.Close(); err != nil {
-		return err
+		return originalValue, err
 	}
 
 	if err := newCpfFile.Close(); err != nil {
-		return err
+		return originalValue, err
 	}
 
 	FS.Remove(tmpFile.Name())
 
-	return nil
+	return originalValue, nil
 }
 
-func parseAndWriteCPF(cpfFile io.Reader, tmpFile io.Writer, onOrOff bool) error {
+func parseAndWriteCPF(cpfFile io.Reader, tmpFile io.Writer, onOrOff bool) (originalValue bool, err error) {
 	scanner := bufio.NewScanner(cpfFile)
 	for scanner.Scan() {
 		line := scanner.Text()
 		if line == "ZSTU=1" || line == "ZSTU=0" {
+			if line == "ZSTU=1" {
+				originalValue = true
+			} else {
+				originalValue = false
+			}
 			if onOrOff {
 				io.WriteString(tmpFile, "ZSTU=1\n")
 			} else {
@@ -91,8 +96,8 @@ func parseAndWriteCPF(cpfFile io.Reader, tmpFile io.Writer, onOrOff bool) error 
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return err
+		return originalValue, err
 	}
 
-	return nil
+	return originalValue, nil
 }
