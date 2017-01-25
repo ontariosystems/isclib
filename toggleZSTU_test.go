@@ -57,7 +57,7 @@ var _ = Describe("ToggleZSTU", func() {
 		})
 	})
 
-	Context("with ZTU=1", func() {
+	Context("with ZSTU=1", func() {
 		BeforeEach(func() {
 			Expect(afero.WriteFile(FS, path, []byte(zstu1), 0644)).To(Succeed())
 		})
