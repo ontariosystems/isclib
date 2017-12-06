@@ -56,17 +56,20 @@ type Instance struct {
 	CControlPath string `json:"-"` // The path to the ccontrol executable
 
 	// These values come directly from ccontrol qlist
-	Name            string         `json:"name"`            // The name of the instance
-	Directory       string         `json:"directory"`       // The directory in which the instance is installed
-	Version         string         `json:"version"`         // The version of Caché/Ensemble
-	Status          InstanceStatus `json:"status"`          // The status of the instance (down, running, etc.)
-	Activity        string         `json:"activity"`        // The last activity date and time (as a string)
-	CPFFileName     string         `json:"cpfFileName"`     // The name of the CPF file used by this instance at startup
-	SuperServerPort int            `json:"superServerPort"` // The SuperServer port
-	WebServerPort   int            `json:"webServerPort"`   // The internal WebServer port
-	JDBCPort        int            `json:"jdbcPort"`        // The JDBC port
-	State           string         `json:"state"`           // The State of the instance (warn, etc.)
-	// There appears to be an additional property after state but I don't know what it is!
+	Name             string         `json:"name"`             // The name of the instance
+	Directory        string         `json:"directory"`        // The directory in which the instance is installed
+	Version          string         `json:"version"`          // The version of Caché/Ensemble
+	Status           InstanceStatus `json:"status"`           // The status of the instance (down, running, etc.)
+	Activity         string         `json:"activity"`         // The last activity date and time (as a string)
+	CPFFileName      string         `json:"cpfFileName"`      // The name of the CPF file used by this instance at startup
+	SuperServerPort  int            `json:"superServerPort"`  // The SuperServer port
+	WebServerPort    int            `json:"webServerPort"`    // The internal WebServer port
+	JDBCPort         int            `json:"jdbcPort"`         // The JDBC port
+	State            string         `json:"state"`            // The State of the instance (warn, etc.)
+	Product          ISCProduct     `json:"product"`          // The product name of the instance
+	MirrorMemberType string         `json:"mirrorMemberType"` // The mirror member type (Failover, Disaster Recovery, etc)
+	MirrorStatus     string         `json:"mirrorStatus"`     // The mirror Status (Primary, Backup, Connected, etc.)
+	DataDirectory    string         `json:"dataDirectory"`    //  The instance data directory.  This might be the same as Directory if durable %SYS isn't in use
 
 	executionSysProcAttr *syscall.SysProcAttr // This is used internally to allow execution of Caché code as different users
 }
@@ -104,6 +107,7 @@ func (i *Instance) UpdateFromQList(qlist string) (err error) {
 
 	i.Name = qs[0]
 	i.Directory = qs[1]
+	i.DataDirectory = i.Directory
 	i.Version = qs[2]
 	i.Status, i.Activity = qlistStatus(qs[3])
 	i.CPFFileName = qs[4]
@@ -111,6 +115,24 @@ func (i *Instance) UpdateFromQList(qlist string) (err error) {
 		i.State = "ok"
 	} else {
 		i.State = qs[8]
+	}
+
+	var productString = ""
+	if len(qs) == 10 {
+		productString = qs[9]
+	}
+	i.Product = i.determineProduct(productString)
+
+	if len(qs) == 11 {
+		i.MirrorMemberType = qs[10]
+	}
+
+	if len(qs) == 12 {
+		i.MirrorStatus = qs[11]
+	}
+
+	if len(qs) == 13 && qs[12] != "" {
+		i.DataDirectory = qs[12]
 	}
 
 	return nil
@@ -128,7 +150,7 @@ type CacheDat struct {
 //  It will get the path of the CACHE.DAT file, the permissions on it, and its owning user / group.
 //  The function returns a map of cacheDat structs containing the above information using the name of the database as its key.
 func (i *Instance) DetermineCacheDatInfo() (map[string]CacheDat, error) {
-	cpfPath := filepath.Join(i.Directory, i.CPFFileName)
+	cpfPath := filepath.Join(i.DataDirectory, i.CPFFileName)
 	file, err := os.Open(cpfPath)
 	if err != nil {
 		return nil, err
@@ -524,4 +546,17 @@ func (i *Instance) removeTempRoutine(namespace, path string) error {
 	}
 
 	return nil
+}
+
+func (i *Instance) determineProduct(product string) ISCProduct {
+	if product != "" {
+		return ParseISCProduct(product)
+	}
+
+	pi, err := i.ReadParametersISC()
+	if err != nil {
+		return Cache
+	}
+
+	return ParseISCProduct(pi.Value("product_info.name"))
 }
