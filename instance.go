@@ -118,20 +118,23 @@ func (i *Instance) UpdateFromQList(qlist string) (err error) {
 	}
 
 	var productString = ""
-	if len(qs) == 10 {
+	if len(qs) >= 10 {
+		// Thus far this always seems to be blank.  Changes to this could make this string misidentify the product
+		// It could be incorrectly documented and might not be the ISC product at all
+		// It could be that when it does have a value it won't match any of the know product strings we check in which case you would have the product reported as Cache
 		productString = qs[9]
 	}
 	i.Product = i.determineProduct(productString)
 
-	if len(qs) == 11 {
+	if len(qs) >= 11 {
 		i.MirrorMemberType = qs[10]
 	}
 
-	if len(qs) == 12 {
+	if len(qs) >= 12 {
 		i.MirrorStatus = qs[11]
 	}
 
-	if len(qs) == 13 && qs[12] != "" {
+	if len(qs) >= 13 && qs[12] != "" {
 		i.DataDirectory = qs[12]
 	}
 
