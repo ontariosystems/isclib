@@ -230,15 +230,17 @@ func (i *Instance) DeterminePrimaryJournalDirectory() (string, error) {
 		return "", err
 	}
 	defer file.Close()
+
+	re, err := regexp.Compile("CurrentDirectory=(.+)")
+	if err != nil {
+		return "", err
+	}
+
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		if re, err := regexp.Compile("CurrentDirectory=(.+)"); err != nil {
-			return "", err
-		} else {
-			matches := re.FindStringSubmatch(scanner.Text())
-			if len(matches) > 0 {
-				return matches[1], nil
-			}
+		matches := re.FindStringSubmatch(scanner.Text())
+		if len(matches) > 0 {
+			return matches[1], nil
 		}
 	}
 
@@ -249,7 +251,7 @@ func (i *Instance) DeterminePrimaryJournalDirectory() (string, error) {
 	return "", fmt.Errorf("unable to determine primary journal directory")
 }
 
-//  DetermineSecondaryJournalDirectory will parse the ISC instance's CPF file for its primary journal directory (AlternateDirectory).
+//  DetermineSecondaryJournalDirectory will parse the ISC instance's CPF file for its secondary journal directory (AlternateDirectory).
 func (i *Instance) DetermineSecondaryJournalDirectory() (string, error) {
 	cpfPath := filepath.Join(i.DataDirectory, i.CPFFileName)
 	file, err := os.Open(cpfPath)
@@ -257,15 +259,17 @@ func (i *Instance) DetermineSecondaryJournalDirectory() (string, error) {
 		return "", err
 	}
 	defer file.Close()
+
+	re, err := regexp.Compile("AlternateDirectory=(.+)")
+	if err != nil {
+		return "", err
+	}
+
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		if re, err := regexp.Compile("AlternateDirectory=(.+)"); err != nil {
-			return "", err
-		} else {
-			matches := re.FindStringSubmatch(scanner.Text())
-			if len(matches) > 0 {
-				return matches[1], nil
-			}
+		matches := re.FindStringSubmatch(scanner.Text())
+		if len(matches) > 0 {
+			return matches[1], nil
 		}
 	}
 
