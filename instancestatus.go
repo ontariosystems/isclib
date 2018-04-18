@@ -29,7 +29,7 @@ const (
 	// InstanceStatusInhibited represents an instance that is up but sign-ons have been inhibited due to an issue.
 	InstanceStatusInhibited InstanceStatus = "sign-on inhibited"
 
-	// InstanceStatusPrimaryTransition represents an instance that is up but the primary mirror memeber is being determined.
+	// InstanceStatusPrimaryTransition represents an instance that is up but the primary mirror member is being determined.
 	InstanceStatusPrimaryTransition InstanceStatus = "sign-on inhibited:primary transition"
 
 	// InstanceStatusDown represents an instance that is down.

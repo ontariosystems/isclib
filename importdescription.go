@@ -29,12 +29,17 @@ const (
 )
 
 var (
-	TooManyRecursiveDirsErr   = errors.New("The glob must contain at most one **")
-	MissingPathSeparatorErr   = errors.New("There must be a path separator between ** and file pattern")
-	PathAfterRecursiveDirsErr = errors.New("A ** must only be used as the last portion of the path before the file pattern")
-	WildcardInDirectoryErr    = errors.New("The directory portion of the glob must not contain *")
+	// ErrTooManyRecursiveDirs is an error signifying too many ** are included in the glob pattern
+	ErrTooManyRecursiveDirs = errors.New("The glob must contain at most one **")
+	// ErrMissingPathSeparator is an error signifying a missing path separator in the glob pattern
+	ErrMissingPathSeparator = errors.New("There must be a path separator between ** and file pattern")
+	// ErrPathAfterRecursiveDirs is an error signifying that additional path information is included after the ** in the glob pattern
+	ErrPathAfterRecursiveDirs = errors.New("A ** must only be used as the last portion of the path before the file pattern")
+	// ErrWildcardInDirectory is an error signifying that a wildcard has been included in the directory part of the glob pattern
+	ErrWildcardInDirectory = errors.New("The directory portion of the glob must not contain *")
 )
 
+// ImportDescription holds information needed for constructing a valid ISC $SYSTEM.OBJ.ImportDir command
 type ImportDescription struct {
 	Dir         string
 	FilePattern string
@@ -42,6 +47,7 @@ type ImportDescription struct {
 	Qualifiers  string
 }
 
+// NewImportDescription creates and returns a new import description based on the provided glob pattern and ISC qualifiers
 func NewImportDescription(pathGlob string, qualifiers string) (*ImportDescription, error) {
 	glob := &ImportDescription{Qualifiers: qualifiers}
 
@@ -53,20 +59,20 @@ func NewImportDescription(pathGlob string, qualifiers string) (*ImportDescriptio
 	case 2:
 		glob.Dir = filepath.Clean(s[0])
 		if !strings.HasPrefix(s[1], "/") {
-			return nil, MissingPathSeparatorErr
+			return nil, ErrMissingPathSeparator
 		}
 
 		if filepath.Dir(s[1]) != "/" {
-			return nil, PathAfterRecursiveDirsErr
+			return nil, ErrPathAfterRecursiveDirs
 		}
 		glob.FilePattern = filepath.Base(s[1])
 		glob.Recursive = true
 	default:
-		return nil, TooManyRecursiveDirsErr
+		return nil, ErrTooManyRecursiveDirs
 	}
 
 	if strings.Contains(glob.Dir, "*") {
-		return nil, WildcardInDirectoryErr
+		return nil, ErrWildcardInDirectory
 	}
 
 	if glob.Dir == "." {
@@ -80,6 +86,7 @@ func NewImportDescription(pathGlob string, qualifiers string) (*ImportDescriptio
 	return glob, nil
 }
 
+// String returns an ISC $SYSTEM.OBJ.ImportDir command as a string
 func (i *ImportDescription) String() string {
 	var rec uint16
 	if i.Recursive {

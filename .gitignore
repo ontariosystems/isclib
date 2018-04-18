@@ -1,0 +1,4 @@
+.idea
+*.coverprofile
+test_results/
+vendor/

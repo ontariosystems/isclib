@@ -23,8 +23,12 @@ import (
 	"github.com/spf13/afero"
 )
 
+// FS is a wrapper for the file system
 var FS = afero.NewOsFs()
 
+// ToggleZSTU ensures that the cpf file at the path provided has the ZSTU setting
+// set to true or false based on the provided boolean value.  It also returns the
+// original value for the ZSTU
 func ToggleZSTU(cpfFilePath string, onOrOff bool) (originalValue bool, err error) {
 	cpfFile, err := FS.Open(cpfFilePath)
 	if err != nil {

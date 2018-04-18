@@ -21,8 +21,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/spf13/afero"
 	. "github.com/ontariosystems/isclib"
+	"github.com/spf13/afero"
 )
 
 var _ = Describe("ToggleZSTU", func() {

@@ -1,4 +1,4 @@
-[![CLA assistant](https://cla-assistant.io/readme/badge/ontariosystems/isclib)](https://cla-assistant.io/ontariosystems/isclib) [![Build Status](https://travis-ci.org/ontariosystems/isclib.svg?branch=master)](https://travis-ci.org/ontariosystems/isclib)
+[![CLA assistant](https://cla-assistant.io/readme/badge/ontariosystems/isclib)](https://cla-assistant.io/ontariosystems/isclib) [![Build Status](https://travis-ci.org/ontariosystems/isclib.svg?branch=master)](https://travis-ci.org/ontariosystems/isclib) [![Go Report Card](https://goreportcard.com/badge/github.com/ontariosystems/isclib)](https://goreportcard.com/report/github.com/ontariosystems/isclib) [![GoDoc](https://godoc.org/github.com/ontariosystems/isclib?status.svg)](https://godoc.org/github.com/ontariosystems/isclib)
 
 # isclib
-Go library for interacting with InterSystems Corporation products like Cache, Ensemble, and IRIS
+Go library for interacting with InterSystems Corporation products like Cache, Ensemble, and IRIS Data Platform

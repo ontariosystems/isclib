@@ -16,14 +16,20 @@ limitations under the License.
 
 package isclib
 
+// ISCProduct represents a particular ISC product
 type ISCProduct uint
 
 const (
+	// Cache is the ISC product Cache
 	Cache ISCProduct = iota
+	// Ensemble is the ISC product Ensemble
 	Ensemble
+	// Iris is the ISC product IRIS Data Platform
 	Iris
 )
 
+// ParseISCProduct parses a string representing a ISC product into an ISCProduct.
+// The default for unknown strings is Cache.
 func ParseISCProduct(product string) ISCProduct {
 	switch product {
 	default:

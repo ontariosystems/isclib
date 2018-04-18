@@ -38,15 +38,17 @@ import (
 )
 
 const (
-	managerUserKey          = "security_settings.manager_user"
-	managerGroupKey         = "security_settings.manager_group"
-	ownerUserKey            = "security_settings.cache_user"
-	ownerGroupKey           = "security_settings.cache_group"
+	managerUserKey  = "security_settings.manager_user"
+	managerGroupKey = "security_settings.manager_group"
+	ownerUserKey    = "security_settings.cache_user"
+	ownerGroupKey   = "security_settings.cache_group"
+	// DefaultImportQualifiers are the default ISC qualifiers used for importing source
 	DefaultImportQualifiers = "/compile/keepsource/expand/multicompile"
 )
 
 var (
-	LoadFailedError = errors.New("Load did not appear to finish successfully.")
+	// ErrLoadFailed is an error signifying that the loading of the source code failed
+	ErrLoadFailed = errors.New("Load did not appear to finish successfully")
 )
 
 // An Instance represents an instance of Caché/Ensemble on the current system.
@@ -141,6 +143,7 @@ func (i *Instance) UpdateFromQList(qlist string) (err error) {
 	return nil
 }
 
+// CacheDat holds information that pertains an existing ISC database
 type CacheDat struct {
 	Path       string
 	Permission string
@@ -149,9 +152,9 @@ type CacheDat struct {
 	Exists     bool
 }
 
-//  DetermineCacheDatInfo will parse the ensemble instance's CPF file for its databases (CACHE.DAT).
-//  It will get the path of the CACHE.DAT file, the permissions on it, and its owning user / group.
-//  The function returns a map of cacheDat structs containing the above information using the name of the database as its key.
+// DetermineCacheDatInfo will parse the ensemble instance's CPF file for its databases (CACHE.DAT).
+// It will get the path of the CACHE.DAT file, the permissions on it, and its owning user / group.
+// The function returns a map of cacheDat structs containing the above information using the name of the database as its key.
 func (i *Instance) DetermineCacheDatInfo() (map[string]CacheDat, error) {
 	cpfPath := filepath.Join(i.DataDirectory, i.CPFFileName)
 	file, err := os.Open(cpfPath)
@@ -222,7 +225,7 @@ func (i *Instance) DetermineOwner() (string, string, error) {
 	return i.getUserAndGroupFromParameters("Owner", ownerUserKey, ownerGroupKey)
 }
 
-//  DeterminePrimaryJournalDirectory will parse the ISC instance's CPF file for its primary journal directory (CurrentDirectory).
+// DeterminePrimaryJournalDirectory will parse the ISC instance's CPF file for its primary journal directory (CurrentDirectory).
 func (i *Instance) DeterminePrimaryJournalDirectory() (string, error) {
 	cpfPath := filepath.Join(i.DataDirectory, i.CPFFileName)
 	file, err := os.Open(cpfPath)
@@ -251,7 +254,7 @@ func (i *Instance) DeterminePrimaryJournalDirectory() (string, error) {
 	return "", fmt.Errorf("unable to determine primary journal directory")
 }
 
-//  DetermineSecondaryJournalDirectory will parse the ISC instance's CPF file for its secondary journal directory (AlternateDirectory).
+// DetermineSecondaryJournalDirectory will parse the ISC instance's CPF file for its secondary journal directory (AlternateDirectory).
 func (i *Instance) DetermineSecondaryJournalDirectory() (string, error) {
 	cpfPath := filepath.Join(i.DataDirectory, i.CPFFileName)
 	file, err := os.Open(cpfPath)
@@ -414,13 +417,13 @@ func (i *Instance) ImportSource(namespace, sourcePathGlob string, qualifiers ...
 	}
 
 	if !strings.Contains(out, "Load finished successfully.") {
-		return out, LoadFailedError
+		return out, ErrLoadFailed
 	}
 
 	return out, nil
 }
 
-// Execute will read code from the provided io.Reader ane execute it in the provided namespace.
+// Execute will read code from the provided io.Reader and execute it in the provided namespace.
 // The code must be valid Caché ObjectScript INT code obeying all of the correct spacing with a MAIN label as the primary entry point.
 // Valid INT code means (this list is not exhaustive)...
 //   - Labels start at the first character on the line
@@ -434,6 +437,8 @@ func (i *Instance) Execute(namespace string, codeReader io.Reader) (string, erro
 	return out.String(), err
 }
 
+// ExecuteWithOutput will read code from the provided io.Reader and execute it in the provided namespace while
+// writing any output to the provided io.Writer.
 func (i *Instance) ExecuteWithOutput(namespace string, codeReader io.Reader, out io.Writer) error {
 	elog := log.WithField("namespace", namespace)
 	elog.Debug("Attempting to execute INT code")

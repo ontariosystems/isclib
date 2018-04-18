@@ -28,26 +28,26 @@ var _ = Describe("ImportDescription", func() {
 	Context("NewImportDescription", func() {
 		It("Only allows one **", func() {
 			_, err := isclib.NewImportDescription("/a/b/c/**/d/e/f/**/*.xml", "")
-			Expect(err).To(MatchError(isclib.TooManyRecursiveDirsErr))
+			Expect(err).To(MatchError(isclib.ErrTooManyRecursiveDirs))
 		})
 
 		It("Does not allow * in the directory", func() {
 			var err error
 			_, err = isclib.NewImportDescription("/a/b/c/*/d/e/f/**/*.xml", "")
-			Expect(err).To(MatchError(isclib.WildcardInDirectoryErr))
+			Expect(err).To(MatchError(isclib.ErrWildcardInDirectory))
 
 			_, err = isclib.NewImportDescription("/a/b/c/*/d/e/f/*.xml", "")
-			Expect(err).To(MatchError(isclib.WildcardInDirectoryErr))
+			Expect(err).To(MatchError(isclib.ErrWildcardInDirectory))
 		})
 
 		It("Does not allow trailing paths between a ** and the file pattern", func() {
 			_, err := isclib.NewImportDescription("/a/b/c/**/d/e/f/*.xml", "")
-			Expect(err).To(MatchError(isclib.PathAfterRecursiveDirsErr))
+			Expect(err).To(MatchError(isclib.ErrPathAfterRecursiveDirs))
 		})
 
 		It("Ensures that there is a path separator between ** and the trailing file pattern", func() {
 			_, err := isclib.NewImportDescription("/a/b/c/***.xml", "")
-			Expect(err).To(MatchError(isclib.MissingPathSeparatorErr))
+			Expect(err).To(MatchError(isclib.ErrMissingPathSeparator))
 		})
 
 		It("Properly parses the directory and file pattern", func() {
