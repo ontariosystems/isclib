@@ -34,7 +34,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
