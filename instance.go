@@ -19,6 +19,7 @@ package isclib
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -31,6 +32,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 
@@ -49,6 +51,7 @@ const (
 var (
 	// ErrLoadFailed is an error signifying that the loading of the source code failed
 	ErrLoadFailed = errors.New("Load did not appear to finish successfully")
+	getQlist      = qlist
 )
 
 // An Instance represents an instance of Caché/Ensemble on the current system.
@@ -79,7 +82,7 @@ type Instance struct {
 // Update will query the the underlying instance and update the Instance fields with its current state.
 // It returns any error encountered.
 func (i *Instance) Update() error {
-	q, err := qlist(i.Name)
+	q, err := getQlist(i.Name)
 	if err != nil {
 		return err
 	}
@@ -339,7 +342,7 @@ func (i *Instance) ExecuteAsCurrentUser() error {
 	return nil
 }
 
-// ExecuteAsManager will  configure the instance to execute all future commands as the instance's owner.
+// ExecuteAsManager will configure the instance to execute all future commands as the instance's owner.
 // This command only functions if the calling program is running as root.
 // It returns any error encountered.
 func (i *Instance) ExecuteAsManager() error {
@@ -351,7 +354,7 @@ func (i *Instance) ExecuteAsManager() error {
 	return i.ExecuteAsUser(owner)
 }
 
-// ExecuteAsUser will  configure the instance to execute all future commands as the provided user.
+// ExecuteAsUser will configure the instance to execute all future commands as the provided user.
 // This command only functions if the calling program is running as root.
 // It returns any error encountered.
 func (i *Instance) ExecuteAsUser(execUser string) error {
@@ -510,6 +513,20 @@ func (i *Instance) ReadParametersISC() (ParametersISC, error) {
 	defer f.Close()
 
 	return LoadParametersISC(f)
+}
+
+func (i *Instance) WaitForReady(ctx context.Context) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(100 * time.Millisecond):
+			i.Update()
+			if i.Status.Ready() {
+				return nil
+			}
+		}
+	}
 }
 
 func qlistStatus(statusAndTime string) (InstanceStatus, string) {
