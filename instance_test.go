@@ -24,6 +24,11 @@ import (
 )
 
 var _ = Describe("Instance", func() {
+	var (
+		instance *Instance
+		err      error
+		timeout  time.Duration
+	)
 	Context("InstanceFromQList", func() {
 		Context("Invalid qlist", func() {
 			instance, err := InstanceFromQList("1^2^3^4^5^6^7")
@@ -120,16 +125,14 @@ var _ = Describe("Instance", func() {
 		})
 	})
 	Context("WaitForReady", func() {
-		var i int
-		BeforeEach(func() {
-			i = 0
-		})
 		Context("With timeout", func() {
 			Context("Does not come up", func() {
-				instance, err := InstanceFromQList("INSTTEST^/ensemble/instances/insttest/^2012.2.3.903.2.12515^down, last used Thu Sep 15 18:58:30 2016^cache.cpf^56772^57772^62972")
-				ctx, can := context.WithTimeout(context.Background(), 50*time.Millisecond)
-				defer can()
-				err = instance.WaitForReady(ctx)
+				BeforeEach(func() {
+					instance, _ = InstanceFromQList("INSTTEST^/ensemble/instances/insttest/^2012.2.3.903.2.12515^down, last used Thu Sep 15 18:58:30 2016^cache.cpf^56772^57772^62972")
+					ctx, can := context.WithTimeout(context.Background(), 50*time.Millisecond)
+					defer can()
+					err = instance.WaitForReady(ctx)
+				})
 				It("Returns an error", func() {
 					Expect(err).To(HaveOccurred())
 				})
@@ -138,17 +141,21 @@ var _ = Describe("Instance", func() {
 				})
 			})
 			Context("Does come up", func() {
-				getQlist = func(instanceName string) (string, error) {
-					if i >= 3 {
-						return "INSTTEST^/ensemble/instances/insttest/^2015.2.2.805.0.16216^running, since Fri May 13 22:07:02 2016^cache.cpf^56772^57772^62972^ok^^^^/mgr/config", nil
+				BeforeEach(func() {
+					timeout = 500 * time.Millisecond
+					getQlist = func(instanceName string) (string, error) {
+						return "INSTTEST^/ensemble/instances/insttest/^2012.2.3.903.2.12515^down, last used Thu Sep 15 18:58:30 2016^cache.cpf^56772^57772^62972", nil
 					}
-					i++
-					return "INSTTEST^/ensemble/instances/insttest/^2012.2.3.903.2.12515^down, last used Thu Sep 15 18:58:30 2016^cache.cpf^56772^57772^62972", nil
-				}
-				instance, err := InstanceFromQList("INSTTEST^/ensemble/instances/insttest/^2012.2.3.903.2.12515^down, last used Thu Sep 15 18:58:30 2016^cache.cpf^56772^57772^62972")
-				ctx, can := context.WithTimeout(context.Background(), 500*time.Millisecond)
-				defer can()
-				err = instance.WaitForReady(ctx)
+					time.AfterFunc(timeout/2, func() {
+						getQlist = func(instanceName string) (string, error) {
+							return "INSTTEST^/ensemble/instances/insttest/^2015.2.2.805.0.16216^running, since Fri May 13 22:07:02 2016^cache.cpf^56772^57772^62972^ok^^^^/mgr/config", nil
+						}
+					})
+					instance, _ = InstanceFromQList("INSTTEST^/ensemble/instances/insttest/^2012.2.3.903.2.12515^down, last used Thu Sep 15 18:58:30 2016^cache.cpf^56772^57772^62972")
+					ctx, can := context.WithTimeout(context.Background(), timeout)
+					defer can()
+					err = instance.WaitForReady(ctx)
+				})
 				It("Does not return an error", func() {
 					Expect(err).NotTo(HaveOccurred())
 				})

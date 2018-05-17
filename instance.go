@@ -516,11 +516,15 @@ func (i *Instance) ReadParametersISC() (ParametersISC, error) {
 }
 
 func (i *Instance) WaitForReady(ctx context.Context) error {
+	return i.WaitForReadyWithInterval(ctx, 100*time.Millisecond)
+}
+
+func (i *Instance) WaitForReadyWithInterval(ctx context.Context, interval time.Duration) error {
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(interval):
 			i.Update()
 			if i.Status.Ready() {
 				return nil
