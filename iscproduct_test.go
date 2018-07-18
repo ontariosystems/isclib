@@ -35,6 +35,7 @@ var _ = Describe("InstanceStatus", func() {
 			Expect(isclib.ParseISCProduct("Ensemble")).To(Equal(isclib.Ensemble), "Ensemble product")
 		})
 		It("Successfully parses IRIS as a product", func() {
+			Expect(isclib.ParseISCProduct("IRIS")).To(Equal(isclib.Iris), "IRIS product")
 			Expect(isclib.ParseISCProduct("IDP")).To(Equal(isclib.Iris), "IRIS product")
 		})
 	})
