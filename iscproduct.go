@@ -38,7 +38,7 @@ func ParseISCProduct(product string) ISCProduct {
 		return Cache
 	case "Ensemble":
 		return Ensemble
-	case "IDP":
+	case "IDP", "IRIS":
 		return Iris
 	}
 }
