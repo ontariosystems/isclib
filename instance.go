@@ -57,10 +57,10 @@ var (
 // An Instance represents an instance of Caché/Ensemble on the current system.
 type Instance struct {
 	// Required to be able to run the executor
-	CSessionPath string `json:"-"` // The path to the csession executable
-	CControlPath string `json:"-"` // The path to the ccontrol executable
+	SessionPath string `json:"-"` // The path to the session executable
+	ControlPath string `json:"-"` // The path to the control executable
 
-	// These values come directly from ccontrol qlist
+	// These values come directly from qlist
 	Name             string         `json:"name"`             // The name of the instance
 	Directory        string         `json:"directory"`        // The directory in which the instance is installed
 	Version          string         `json:"version"`          // The version of Caché/Ensemble
@@ -124,9 +124,8 @@ func (i *Instance) UpdateFromQList(qlist string) (err error) {
 
 	var productString = ""
 	if len(qs) >= 10 {
-		// Thus far this always seems to be blank.  Changes to this could make this string misidentify the product
-		// It could be incorrectly documented and might not be the ISC product at all
-		// It could be that when it does have a value it won't match any of the know product strings we check in which case you would have the product reported as Cache
+		// Changes to this could make this string misidentify the product
+		// It could be that the value won't match any of the known product strings we check in which case you would have the product reported as Cache
 		productString = qs[9]
 	}
 	i.Product = i.determineProduct(productString)
@@ -146,8 +145,8 @@ func (i *Instance) UpdateFromQList(qlist string) (err error) {
 	return nil
 }
 
-// CacheDat holds information that pertains an existing ISC database
-type CacheDat struct {
+// ISCDat holds information that pertains an existing ISC database
+type ISCDat struct {
 	Path       string
 	Permission string
 	Owner      string
@@ -155,10 +154,10 @@ type CacheDat struct {
 	Exists     bool
 }
 
-// DetermineCacheDatInfo will parse the ensemble instance's CPF file for its databases (CACHE.DAT).
-// It will get the path of the CACHE.DAT file, the permissions on it, and its owning user / group.
-// The function returns a map of cacheDat structs containing the above information using the name of the database as its key.
-func (i *Instance) DetermineCacheDatInfo() (map[string]CacheDat, error) {
+// DetermineISCDatInfo will parse the ensemble instance's CPF file for its databases (CACHE.DAT, IRIS.DAT).
+// It will get the path of the InterSystems DAT file, the permissions on it, and its owning user / group.
+// The function returns a map of ISCDat structs containing the above information using the name of the database as its key.
+func (i *Instance) DetermineISCDatInfo() (map[string]ISCDat, error) {
 	cpfPath := filepath.Join(i.DataDirectory, i.CPFFileName)
 	file, err := os.Open(cpfPath)
 	if err != nil {
@@ -166,8 +165,8 @@ func (i *Instance) DetermineCacheDatInfo() (map[string]CacheDat, error) {
 	}
 	defer file.Close()
 	var inDbSection bool
-	var cacheDats = make(map[string]CacheDat)
-	//regex to remove the [ ,1,,, etc. ] configuration on CACHE.DAT lines
+	var iscDats = make(map[string]ISCDat)
+	//regex to remove the [ ,1,,, etc. ] configuration on InterSystems DAT lines
 	re := regexp.MustCompile("(1+|,+)")
 
 	scanner := bufio.NewScanner(file)
@@ -179,12 +178,12 @@ func (i *Instance) DetermineCacheDatInfo() (map[string]CacheDat, error) {
 				break
 			}
 			splitLine := strings.Split(line, "=")
-			cacheDatPath := splitLine[1] + "CACHE.DAT"
-			cacheDat := CacheDat{Path: splitLine[1], Exists: true}
-			datFileInfo, err := os.Stat(cacheDatPath)
+			iscDatPath := splitLine[1] + i.DetermineISCDatFileName()
+			iscDat := ISCDat{Path: splitLine[1], Exists: true}
+			datFileInfo, err := os.Stat(iscDatPath)
 			if err != nil {
 				if os.IsNotExist(err) {
-					cacheDat.Exists = false
+					iscDat.Exists = false
 				} else {
 					return nil, err
 				}
@@ -193,15 +192,15 @@ func (i *Instance) DetermineCacheDatInfo() (map[string]CacheDat, error) {
 				if err != nil {
 					return nil, err
 				}
-				cacheDat.Owner = fileOwner.Username
+				iscDat.Owner = fileOwner.Username
 				fileGroup, err := user.LookupGroupId(fmt.Sprint(datFileInfo.Sys().(*syscall.Stat_t).Gid))
 				if err != nil {
 					return nil, err
 				}
-				cacheDat.Group = fileGroup.Name
-				cacheDat.Permission = datFileInfo.Mode().String()
+				iscDat.Group = fileGroup.Name
+				iscDat.Permission = datFileInfo.Mode().String()
 			}
-			cacheDats[splitLine[0]] = cacheDat
+			iscDats[splitLine[0]] = iscDat
 		} else if line == "[Databases]" {
 			inDbSection = true
 		}
@@ -211,7 +210,7 @@ func (i *Instance) DetermineCacheDatInfo() (map[string]CacheDat, error) {
 		return nil, err
 	}
 
-	return cacheDats, nil
+	return iscDats, nil
 }
 
 // DetermineManager will determine the manager of an instance by reading the parameters file associated with this instance.
@@ -286,12 +285,32 @@ func (i *Instance) DetermineSecondaryJournalDirectory() (string, error) {
 	return "", fmt.Errorf("unable to determine secondary journal directory")
 }
 
+// DetermineISCDatFileName returns the filename of the InterSystems DAT files used by the instance
+func (i *Instance) DetermineISCDatFileName() string {
+	switch i.Product {
+	default:
+		return "CACHE.DAT"
+	case Iris:
+		return "IRIS.DAT"
+	}
+}
+
+// LicenseKeyFilePath returns the file path to the license key for the instance
+func (i *Instance) LicenseKeyFilePath() string {
+	switch i.Product {
+	default:
+		return filepath.Join(i.DataDirectory, "mgr", "cache.key")
+	case Iris:
+		return filepath.Join(i.DataDirectory, "mgr", "license.key")
+	}
+}
+
 // Start will ensure that an instance is started.
 // It returns any error encountered when attempting to start the instance.
 func (i *Instance) Start() error {
 	// TODO: Think about a nozstu flag if there's a reason
 	if i.Status.Down() {
-		if output, err := exec.Command(i.ccontrolPath(), "start", i.Name, "quietly").CombinedOutput(); err != nil {
+		if output, err := exec.Command(i.controlPath(), "start", i.Name, "quietly").CombinedOutput(); err != nil {
 			return fmt.Errorf("Error starting instance, error: %s, output: %s", err, output)
 		}
 	}
@@ -318,7 +337,7 @@ func (i *Instance) Stop() error {
 			args = append(args, "bypass")
 		}
 		args = append(args, "quietly")
-		if output, err := exec.Command(i.ccontrolPath(), args...).CombinedOutput(); err != nil {
+		if output, err := exec.Command(i.controlPath(), args...).CombinedOutput(); err != nil {
 			return fmt.Errorf("Error stopping instance, error: %s, output: %s", err, output)
 		}
 	}
@@ -413,7 +432,7 @@ func (i *Instance) ImportSource(namespace, sourcePathGlob string, qualifiers ...
 		"qualifiers": qstr,
 		"command":    cmd,
 	}).Debug("Attempting to import source")
-	o, err := i.GetCSessionCommand(namespace, cmd).CombinedOutput()
+	o, err := i.GetSessionCommand(namespace, cmd).CombinedOutput()
 	out := string(o)
 	if err != nil {
 		return out, err
@@ -461,22 +480,22 @@ func (i *Instance) ExecuteWithOutput(namespace string, codeReader io.Reader, out
 	routineName := filepath.Base(codePath)
 	defer i.removeTempRoutine(namespace, routineName)
 
-	cmd := i.GetCSessionCommand(namespace, "EnsLibMain^"+routineName)
+	cmd := i.GetSessionCommand(namespace, "EnsLibMain^"+routineName)
 
 	cmd.Stdout = out
 	if err := cmd.Start(); err != nil {
-		log.WithError(err).Debug("Failed to start csession")
+		log.WithError(err).Debug("Failed to start session")
 		return err
 	}
 
-	elog.Debug("Waiting on csession to exit")
+	elog.Debug("Waiting on session to exit")
 	return cmd.Wait()
 }
 
-// GetCSessionCommand will return a properly configured instance of exec.Cmd to
-// run the provided command (properly formatted for csession) in the provided
+// GetSessionCommand will return a properly configured instance of exec.Cmd to
+// run the provided command (properly formatted for session) in the provided
 // namespace.
-func (i *Instance) GetCSessionCommand(namespace, command string) *exec.Cmd {
+func (i *Instance) GetSessionCommand(namespace, command string) *exec.Cmd {
 	args := []string{i.Name}
 	if namespace != "" {
 		args = append(args, "-U", namespace)
@@ -486,7 +505,13 @@ func (i *Instance) GetCSessionCommand(namespace, command string) *exec.Cmd {
 		args = append(args, command)
 	}
 
-	cmd := exec.Command(i.csessionPath(), args...)
+	sc := i.sessionCommand()
+	if strings.Contains(sc, " ") {
+		scp := strings.Split(sc, " ")
+		sc = scp[0]
+		args = append(scp[1:], args...)
+	}
+	cmd := exec.Command(sc, args...)
 	if i.executionSysProcAttr != nil {
 		cmd.SysProcAttr = i.executionSysProcAttr
 	}
@@ -505,7 +530,7 @@ func (i *Instance) ExecuteString(namespace string, code string) (string, error) 
 // ReadParametersISC will read the current instances parameters ISC file into a simple data structure.
 // It returns the ParametersISC data structure and any error encountered.
 func (i *Instance) ReadParametersISC() (ParametersISC, error) {
-	pfp := filepath.Join(i.Directory, cacheParametersFile)
+	pfp := filepath.Join(i.Directory, iscParametersFile)
 	f, err := os.Open(pfp)
 	if err != nil {
 		return nil, err
@@ -577,20 +602,30 @@ func (i *Instance) genExecutorTmpFile(codeReader io.Reader) (path string, error 
 	return tmpFile.Name(), nil
 }
 
-func (i *Instance) csessionPath() string {
-	if i.CSessionPath == "" {
-		return globalCSessionPath
+func (i *Instance) sessionCommand() string {
+	if i.SessionPath == "" {
+		switch i.Product {
+		default:
+			return globalCSessionPath
+		case Iris:
+			return globalIrisSessionCommand
+		}
 	}
 
-	return i.CSessionPath
+	return i.SessionPath
 }
 
-func (i *Instance) ccontrolPath() string {
-	if i.CControlPath == "" {
-		return globalCControlPath
+func (i *Instance) controlPath() string {
+	if i.ControlPath == "" {
+		switch i.Product {
+		default:
+			return globalCControlPath
+		case Iris:
+			return globalIrisPath
+		}
 	}
 
-	return i.CControlPath
+	return i.ControlPath
 }
 
 func (i *Instance) getUserAndGroupFromParameters(desc, userKey, groupKey string) (string, string, error) {
@@ -621,7 +656,7 @@ func (i *Instance) removeTempRoutine(namespace, path string) error {
 	})
 
 	l.Debug("Removing temporary routine")
-	cmd := i.GetCSessionCommand(namespace, fmt.Sprintf(`##class(%%Routine).Delete("%s",0,1)`, routineName))
+	cmd := i.GetSessionCommand(namespace, fmt.Sprintf(`##class(%%Routine).Delete("%s",0,1)`, routineName))
 	if err := cmd.Start(); err != nil {
 		l.WithError(err).Error("Failed to start deletion")
 		return errwrap.Wrapf("Failed to start routine deletion: {{err}}", err)

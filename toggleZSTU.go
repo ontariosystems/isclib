@@ -45,11 +45,11 @@ func ToggleZSTU(cpfFilePath string, onOrOff bool) (originalValue bool, err error
 		return originalValue, err
 	}
 
-	if err := cpfFile.Close(); err != nil {
+	if err = cpfFile.Close(); err != nil {
 		return originalValue, err
 	}
 
-	if err := tmpFile.Close(); err != nil {
+	if err = tmpFile.Close(); err != nil {
 		return originalValue, err
 	}
 

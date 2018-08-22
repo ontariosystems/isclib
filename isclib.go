@@ -21,6 +21,7 @@ package isclib
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"os/exec"
 
 	log "github.com/sirupsen/logrus"
@@ -28,8 +29,9 @@ import (
 
 const (
 	defaultCControlPath = "ccontrol"
+	defaultIrisPath     = "iris"
 	defaultCSessionPath = "csession"
-	cacheParametersFile = "parameters.isc"
+	iscParametersFile   = "parameters.isc"
 )
 
 const (
@@ -55,16 +57,26 @@ EnsLibMain() public {
 
 var (
 	globalCControlPath        = defaultCControlPath
+	globalIrisPath            = defaultIrisPath
 	globalCSessionPath        = defaultCSessionPath
+	globalIrisSessionCommand  = fmt.Sprintf("%s session", defaultIrisPath)
 	executeTemporaryDirectory = "" // Default is system temp directory
 )
 
-// CControlPath returns the current path to the ccontrol executable
+// ControlPath returns the current path to the ccontrol executable
 func CControlPath() string { return globalCControlPath }
 
 // SetCControlPath sets the current path to the ccontrol executable
 func SetCControlPath(path string) {
 	globalCControlPath = path
+}
+
+// IrisPath returns the current path to the iris executable
+func IrisPath() string { return globalIrisPath }
+
+// SetIrisPath sets the current path to the iris executable
+func SetIrisPath(path string) {
+	globalIrisPath = path
 }
 
 // CSessionPath returns the current path to the csession executable
@@ -73,6 +85,14 @@ func CSessionPath() string { return globalCSessionPath }
 // SetCSessionPath sets the current path to the csession executable
 func SetCSessionPath(path string) {
 	globalCSessionPath = path
+}
+
+// IrisSessionCommand returns the current string for the iris session command
+func IrisSessionCommand() string { return globalIrisSessionCommand }
+
+// SetIrisSessionCommand sets the current string for the iris session command
+func SetIrisSessionCommand(path string) {
+	globalIrisSessionCommand = path
 }
 
 // ExecuteTemporaryDirectory returns the directory where temporary files for ObjectScript execution will be placed.
@@ -87,15 +107,30 @@ func SetExecuteTemporaryDirectory(path string) {
 	executeTemporaryDirectory = path
 }
 
-// ISCExists returns a boolean which is true when an ISC product or Caché instance exists on this system.
+// ISCExists returns a boolean which is true when an ISC product instance exists on this system.
 func ISCExists() bool {
+	return CacheExists() || IrisExists()
+}
+
+// CacheExists returns a boolean which is true when a Cache or Ensemble instance exists on this system
+func CacheExists() bool {
 	if _, err := exec.LookPath(globalCControlPath); err != nil {
-		log.WithField("ccontrolPath", globalCControlPath).WithError(err).Debug("ccontrol executable not found")
+		log.WithField("controlPath", globalCControlPath).WithError(err).Debug("ccontrol executable not found")
 		return false
 	}
 
 	if _, err := exec.LookPath(globalCSessionPath); err != nil {
 		log.WithField("csessionPath", globalCControlPath).WithError(err).Debug("csession executable not found")
+		return false
+	}
+
+	return true
+}
+
+// IrisExists returns a boolean that is true when an Iris instance exists on this system
+func IrisExists() bool {
+	if _, err := exec.LookPath(globalIrisPath); err != nil {
+		log.WithField("irisPath", globalIrisPath).WithError(err).Debug("iris executable not found")
 		return false
 	}
 
@@ -139,8 +174,8 @@ func LoadInstance(name string) (*Instance, error) {
 	return InstanceFromQList(q)
 }
 
-// InstanceFromQList will parse the output of a ccontrol qlist into an Instance struct.
-// It expects the results of a ccontrol qlist for a single instance as a string.
+// InstanceFromQList will parse the output of a qlist into an Instance struct.
+// It expects the results of a qlist for a single instance as a string.
 // It returns the parsed instance and any error encountered.
 func InstanceFromQList(qlist string) (*Instance, error) {
 	i := new(Instance)

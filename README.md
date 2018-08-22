@@ -6,3 +6,63 @@
 [![GoDoc](https://godoc.org/github.com/ontariosystems/isclib?status.svg)](https://godoc.org/github.com/ontariosystems/isclib)
 
 Go library for interacting with InterSystems Corporation products like Caché, Ensemble, and IRIS Data Platform
+
+It provides methods for determining if ISC products are installed and for interacting with instances of them
+
+### Checking for installed ISC products
+
+```go
+if isclib.CacheExists() {
+	// perform actions if Cache/Ensemble is installed
+}
+
+if isclib.IrisExists() {
+	//perform actions if Iris is installed
+}
+
+if isclib.ISCExists() {
+	//perform actions if an ISC product is installed
+}
+```
+
+### Interacting with an instance
+
+You can get access to an instance, find information about the instance (installation directory, status, ports, version, etc.) and perform operations like starting/stopping the instance and executing code in a namespace
+
+```go
+package main
+
+import (
+	"bytes"
+	"fmt"
+
+	"github.com/ontariosystems/isclib"
+)
+
+const (
+	c = `MAIN
+ write $zversion
+ do $system.Process.Terminate($job,0)
+ quit
+
+`
+)
+
+func main() {
+	i, err := isclib.LoadInstance("docker")
+	if err != nil {
+		panic(err)
+	}
+
+	if i.Status == "down" {
+		i.Start()
+	}
+
+	r := bytes.NewReader([]byte(c))
+	if out, err := i.Execute("%SYS", r); err != nil {
+		panic(err)
+	} else {
+		fmt.Println(out)
+	}
+}
+``` 
