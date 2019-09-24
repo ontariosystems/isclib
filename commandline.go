@@ -19,7 +19,7 @@ package isclib
 import (
 	"os/exec"
 
-	"go.ontsys.com/go-log"
+	log "github.com/sirupsen/logrus"
 )
 
 // Commands represents the ISC command lines that are available
