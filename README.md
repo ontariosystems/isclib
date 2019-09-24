@@ -9,19 +9,23 @@ Go library for interacting with InterSystems Corporation products like Caché, E
 
 It provides methods for determining if ISC products are installed and for interacting with instances of them
 
-### Checking for installed ISC products
+### Checking for available ISC commands
 
 ```go
-if isclib.CacheExists() {
-	// perform actions if Cache/Ensemble is installed
-}
+package main
 
-if isclib.IrisExists() {
-	//perform actions if Iris is installed
-}
+import (
+	"github.com/ontariosystems/isclib"
+)
 
-if isclib.ISCExists() {
-	//perform actions if an ISC product is installed
+func main() {
+    if isclib.AvailableCommands().Has(isclib.CControlCommand) {
+        // perform actions if Cache/Ensemble is installed
+    }
+    
+    if isclib.AvailableCommands().Has(isclib.IrisCommand) {
+        //perform actions if Iris is installed
+    }
 }
 ```
 
@@ -55,7 +59,9 @@ func main() {
 	}
 
 	if i.Status == "down" {
-		i.Start()
+		if err := i.Start(); err != nil {
+			panic(err)
+		}
 	}
 
 	r := bytes.NewReader([]byte(c))

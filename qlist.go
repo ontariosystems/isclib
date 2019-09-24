@@ -34,21 +34,21 @@ func qlist(instanceName string) (string, error) {
 		args = append(args, instanceName)
 	}
 
-	if IrisExists() {
-		out, err := exec.Command(globalIrisPath, args...).CombinedOutput()
-		if err != nil {
-			return "", err
-		}
-		qlist = strings.TrimSpace(string(out))
+	var cmd *exec.Cmd
+	commands := AvailableCommands()
+	switch {
+	case commands.Has(IrisCommand):
+		cmd = exec.Command(globalIrisPath, args...)
+	case commands.Has(CControlCommand):
+		cmd = exec.Command(globalCControlPath, args...)
+	default:
+		return qlist, nil
 	}
 
-	if qlist == "" && CacheExists() {
-		out, err := exec.Command(globalCControlPath, args...).CombinedOutput()
-		if err != nil {
-			return "", err
-		}
-		qlist = strings.TrimSpace(string(out))
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", err
 	}
 
-	return qlist, nil
+	return strings.TrimSpace(string(out)), nil
 }

@@ -189,7 +189,7 @@ var _ = Describe("Instance", func() {
 			})
 		})
 	})
-	Describe("GetSessionCommand", func() {
+	Describe("SessionCommand", func() {
 		BeforeEach(func() {
 			origCSessionCommand = CSessionPath()
 			SetCSessionPath("/somepath/csession")
@@ -206,14 +206,14 @@ var _ = Describe("Instance", func() {
 			})
 			Context("with no namespace or command", func() {
 				It("Returns the correct command to execute", func() {
-					cmd := instance.GetSessionCommand("", "")
+					cmd := instance.SessionCommand("", "")
 					Expect(cmd.Path).To(Equal("/somepath/csession"))
 					Expect(cmd.Args).To(BeEquivalentTo([]string{"/somepath/csession", "INSTTEST"}))
 				})
 			})
 			Context("with a namespace and command", func() {
 				It("Returns the correct command to execute", func() {
-					cmd := instance.GetSessionCommand("TEST", "TEST^TEST")
+					cmd := instance.SessionCommand("TEST", "TEST^TEST")
 					Expect(cmd.Path).To(Equal("/somepath/csession"))
 					Expect(cmd.Args).To(BeEquivalentTo([]string{"/somepath/csession", "INSTTEST", "-U", "TEST", "TEST^TEST"}))
 				})
@@ -227,7 +227,7 @@ var _ = Describe("Instance", func() {
 					SetCSessionPath(origCSessionCommand)
 				})
 				It("Returns the correct command to execute", func() {
-					cmd := instance.GetSessionCommand("TEST", "TEST^TEST")
+					cmd := instance.SessionCommand("TEST", "TEST^TEST")
 					Expect(cmd.Path).To(Equal("dsession"))
 					Expect(cmd.Args).To(BeEquivalentTo([]string{"dsession", "INSTTEST", "-U", "TEST", "TEST^TEST"}))
 				})
@@ -242,7 +242,7 @@ var _ = Describe("Instance", func() {
 					}
 				})
 				It("Returns the correct command to execute", func() {
-					cmd := instance.GetSessionCommand("TEST", "TEST^TEST")
+					cmd := instance.SessionCommand("TEST", "TEST^TEST")
 					Expect(cmd.Path).To(Equal("/somepath/csession"))
 					Expect(cmd.Args).To(BeEquivalentTo([]string{"/somepath/csession", "INSTTEST", "-U", "TEST", "TEST^TEST"}))
 					Expect(cmd.SysProcAttr.Credential.Uid).To(Equal(uint32(0)))
@@ -256,14 +256,14 @@ var _ = Describe("Instance", func() {
 			})
 			Context("with no namespace or command", func() {
 				It("Returns the correct command to execute", func() {
-					cmd := instance.GetSessionCommand("", "")
+					cmd := instance.SessionCommand("", "")
 					Expect(cmd.Path).To(Equal("/somepath/csession"))
 					Expect(cmd.Args).To(BeEquivalentTo([]string{"/somepath/csession", "INSTTEST"}))
 				})
 			})
 			Context("with a namespace and command", func() {
 				It("Returns the correct command to execute", func() {
-					cmd := instance.GetSessionCommand("TEST", "TEST^TEST")
+					cmd := instance.SessionCommand("TEST", "TEST^TEST")
 					Expect(cmd.Path).To(Equal("/somepath/csession"))
 					Expect(cmd.Args).To(BeEquivalentTo([]string{"/somepath/csession", "INSTTEST", "-U", "TEST", "TEST^TEST"}))
 				})
@@ -277,7 +277,7 @@ var _ = Describe("Instance", func() {
 					SetCSessionPath(origCSessionCommand)
 				})
 				It("Returns the correct command to execute", func() {
-					cmd := instance.GetSessionCommand("TEST", "TEST^TEST")
+					cmd := instance.SessionCommand("TEST", "TEST^TEST")
 					Expect(cmd.Path).To(Equal("dsession"))
 					Expect(cmd.Args).To(BeEquivalentTo([]string{"dsession", "INSTTEST", "-U", "TEST", "TEST^TEST"}))
 				})
@@ -292,7 +292,7 @@ var _ = Describe("Instance", func() {
 					}
 				})
 				It("Returns the correct command to execute", func() {
-					cmd := instance.GetSessionCommand("TEST", "TEST^TEST")
+					cmd := instance.SessionCommand("TEST", "TEST^TEST")
 					Expect(cmd.Path).To(Equal("/somepath/csession"))
 					Expect(cmd.Args).To(BeEquivalentTo([]string{"/somepath/csession", "INSTTEST", "-U", "TEST", "TEST^TEST"}))
 					Expect(cmd.SysProcAttr.Credential.Uid).To(Equal(uint32(0)))
@@ -306,14 +306,14 @@ var _ = Describe("Instance", func() {
 			})
 			Context("with no namespace or command", func() {
 				It("Returns the correct command to execute", func() {
-					cmd := instance.GetSessionCommand("", "")
+					cmd := instance.SessionCommand("", "")
 					Expect(cmd.Path).To(Equal("/somepath/iris"))
 					Expect(cmd.Args).To(BeEquivalentTo([]string{"/somepath/iris", "session", "INSTTEST"}))
 				})
 			})
 			Context("with a namespace and command", func() {
 				It("Returns the correct command to execute", func() {
-					cmd := instance.GetSessionCommand("TEST", "TEST^TEST")
+					cmd := instance.SessionCommand("TEST", "TEST^TEST")
 					Expect(cmd.Path).To(Equal("/somepath/iris"))
 					Expect(cmd.Args).To(BeEquivalentTo([]string{"/somepath/iris", "session", "INSTTEST", "-U", "TEST", "TEST^TEST"}))
 				})
@@ -323,7 +323,7 @@ var _ = Describe("Instance", func() {
 					globalIrisSessionCommand = "dsession"
 				})
 				It("Returns the correct command to execute", func() {
-					cmd := instance.GetSessionCommand("TEST", "TEST^TEST")
+					cmd := instance.SessionCommand("TEST", "TEST^TEST")
 					Expect(cmd.Path).To(Equal("dsession"))
 					Expect(cmd.Args).To(BeEquivalentTo([]string{"dsession", "INSTTEST", "-U", "TEST", "TEST^TEST"}))
 				})
@@ -333,7 +333,7 @@ var _ = Describe("Instance", func() {
 					globalIrisSessionCommand = "iris session please sir"
 				})
 				It("Returns the correct command to execute", func() {
-					cmd := instance.GetSessionCommand("TEST", "TEST^TEST")
+					cmd := instance.SessionCommand("TEST", "TEST^TEST")
 					Expect(cmd.Path).To(Equal("iris"))
 					Expect(cmd.Args).To(BeEquivalentTo([]string{"iris", "session", "please", "sir", "INSTTEST", "-U", "TEST", "TEST^TEST"}))
 				})
@@ -348,7 +348,7 @@ var _ = Describe("Instance", func() {
 					}
 				})
 				It("Returns the correct command to execute", func() {
-					cmd := instance.GetSessionCommand("TEST", "TEST^TEST")
+					cmd := instance.SessionCommand("TEST", "TEST^TEST")
 					Expect(cmd.Path).To(Equal("/somepath/iris"))
 					Expect(cmd.Args).To(BeEquivalentTo([]string{"/somepath/iris", "session", "INSTTEST", "-U", "TEST", "TEST^TEST"}))
 					Expect(cmd.SysProcAttr.Credential.Uid).To(Equal(uint32(0)))

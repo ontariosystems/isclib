@@ -19,10 +19,10 @@ build:
 
 test:
 	mkdir -p test_results
-	GO15VENDOREXPERIMENT=1 ginkgo -r -cover
+	ginkgo -r -cover
 
 watch:
-	GO15VENDOREXPERIMENT=1 ginkgo watch -r -cover
+	ginkgo watch -r -cover
 
 cover:
 	go tool cover -html=isclib.coverprofile

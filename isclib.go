@@ -22,9 +22,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"os/exec"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -63,7 +60,7 @@ var (
 	executeTemporaryDirectory = "" // Default is system temp directory
 )
 
-// ControlPath returns the current path to the ccontrol executable
+// CControlPath returns the current path to the ccontrol executable
 func CControlPath() string { return globalCControlPath }
 
 // SetCControlPath sets the current path to the ccontrol executable
@@ -105,36 +102,6 @@ func ExecuteTemporaryDirectory() string {
 // Passing "" will result in using the system default temp directory.
 func SetExecuteTemporaryDirectory(path string) {
 	executeTemporaryDirectory = path
-}
-
-// ISCExists returns a boolean which is true when an ISC product instance exists on this system.
-func ISCExists() bool {
-	return CacheExists() || IrisExists()
-}
-
-// CacheExists returns a boolean which is true when a Cache or Ensemble instance exists on this system
-func CacheExists() bool {
-	if _, err := exec.LookPath(globalCControlPath); err != nil {
-		log.WithField("controlPath", globalCControlPath).WithError(err).Debug("ccontrol executable not found")
-		return false
-	}
-
-	if _, err := exec.LookPath(globalCSessionPath); err != nil {
-		log.WithField("csessionPath", globalCControlPath).WithError(err).Debug("csession executable not found")
-		return false
-	}
-
-	return true
-}
-
-// IrisExists returns a boolean that is true when an Iris instance exists on this system
-func IrisExists() bool {
-	if _, err := exec.LookPath(globalIrisPath); err != nil {
-		log.WithField("irisPath", globalIrisPath).WithError(err).Debug("iris executable not found")
-		return false
-	}
-
-	return true
 }
 
 // LoadInstances returns a listing of all Caché/Ensemble instances on this system.
