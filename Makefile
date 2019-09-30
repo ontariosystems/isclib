@@ -4,10 +4,10 @@
 # Not a prerequisite of lint becuase it takes a while
 lintinstall:
 	@go get -u github.com/alecthomas/gometalinter
-	@gometalinter --install --update
+	@gometalinter --install --no-vendored-linters
 
 lint:
-	@gometalinter ./...
+	@gometalinter --vendor ./...
 
 prep:
 	go get github.com/onsi/ginkgo/ginkgo

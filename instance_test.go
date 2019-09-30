@@ -173,19 +173,19 @@ var _ = Describe("Instance", func() {
 		Context("The product is Cache", func() {
 			It("Returns the correct DAT filename", func() {
 				instance, _ = InstanceFromQList(cacheqlist)
-				Expect(instance.DetermineISCDatFileName()).To(Equal("CACHE.DAT"))
+				Expect(instance.DetermineISCDatFileName()).To(Equal(CacheDatName))
 			})
 		})
 		Context("The product is Ensemble", func() {
 			It("Returns the correct DAT filename", func() {
 				instance, _ = InstanceFromQList(ensembleqlist)
-				Expect(instance.DetermineISCDatFileName()).To(Equal("CACHE.DAT"))
+				Expect(instance.DetermineISCDatFileName()).To(Equal(CacheDatName))
 			})
 		})
 		Context("The product is Iris", func() {
 			It("Returns the correct DAT filename", func() {
 				instance, _ = InstanceFromQList(irisqlist)
-				Expect(instance.DetermineISCDatFileName()).To(Equal("IRIS.DAT"))
+				Expect(instance.DetermineISCDatFileName()).To(Equal(IrisDatName))
 			})
 		})
 	})

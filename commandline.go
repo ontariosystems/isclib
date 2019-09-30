@@ -25,18 +25,27 @@ import (
 // Commands represents the ISC command lines that are available
 type Commands uint
 
-func (c *Commands) Set(command Commands)     { *c |= command }
-func (c *Commands) Clear(command Commands)   { *c &^= command }
-func (c *Commands) Toggle(command Commands)  { *c ^= command }
+// Set updates the list of available commands to include the provided command
+func (c *Commands) Set(command Commands) { *c |= command }
+
+// Clear updates the list of available commands to remove the provided command
+func (c *Commands) Clear(command Commands) { *c &^= command }
+
+// Has returns a boolean indicating whether the requested command is marked as available
 func (c Commands) Has(command Commands) bool { return c&command != 0 }
 
 const (
+	// CControlCommand indicates that the ccontrol command is available
 	CControlCommand Commands = 1 << iota
+	// CSessionCommand indicates that the csession command is available
 	CSessionCommand
+	// IrisCommand indicates that the iris command is available
 	IrisCommand
+	// NoCommand indicates the none of the ISC command lines are available
 	NoCommand Commands = 0
 )
 
+// AvailableCommands returns a Commands bitmask indicating which ISC command lines are available
 func AvailableCommands() Commands {
 	var commands = NoCommand
 

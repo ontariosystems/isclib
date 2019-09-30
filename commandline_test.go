@@ -184,28 +184,6 @@ var _ = Describe("Commands", func() {
 		})
 	})
 
-	Context("Toggle", func() {
-		var commands isclib.Commands
-		Context("Toggling a command from missing to available", func() {
-			BeforeEach(func() {
-				commands = isclib.NoCommand
-			})
-			It("includes the toggled command", func() {
-				commands.Toggle(isclib.IrisCommand)
-				Expect(commands.Has(isclib.IrisCommand)).To(BeTrue())
-			})
-		})
-		Context("Toggling a command from available to missing", func() {
-			BeforeEach(func() {
-				commands = isclib.IrisCommand
-			})
-			It("does not include the toggled command", func() {
-				commands.Toggle(isclib.IrisCommand)
-				Expect(commands.Has(isclib.IrisCommand)).To(BeFalse())
-			})
-		})
-	})
-
 	Context("Has", func() {
 		var commands isclib.Commands
 		Context("Has set commands", func() {

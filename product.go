@@ -26,6 +26,7 @@ const (
 	Ensemble
 	// Iris is the ISC product IRIS Data Platform
 	Iris
+	// None indicates that there are no ISC products
 	None Product = 0
 )
 

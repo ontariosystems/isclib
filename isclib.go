@@ -14,6 +14,69 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+/*
+Package isclib facilitates managing and interacting with ISC products
+
+A simple example of checking for available ISC commands
+
+	package main
+
+	import (
+	    "github.com/ontariosystems/isclib"
+	)
+
+	func main() {
+	    if isclib.AvailableCommands().Has(isclib.CControlCommand) {
+	        // perform actions if Cache/Ensemble is installed
+	    }
+
+	    if isclib.AvailableCommands().Has(isclib.IrisCommand) {
+	        //perform actions if Iris is installed
+	    }
+	}
+
+You can get access to an instance, find information about the instance (installation directory, status, ports, version, etc.) and perform operations like starting/stopping the instance and executing code in a namespace
+
+A simple example of interacting with an instance by ensuring the instance is running and then printing the version
+
+	package main
+
+	import (
+		"bytes"
+		"fmt"
+
+		"github.com/ontariosystems/isclib"
+	)
+
+	const (
+		c = `MAIN
+ 	write $zversion
+ 	do $system.Process.Terminate($job,0)
+ 	quit
+
+	`
+	)
+
+	func main() {
+		i, err := isclib.LoadInstance("docker")
+		if err != nil {
+			panic(err)
+		}
+
+		if i.Status == "down" {
+			if err := i.Start(); err != nil {
+				panic(err)
+			}
+		}
+
+		r := bytes.NewReader([]byte(c))
+		if out, err := i.Execute("%SYS", r); err != nil {
+			panic(err)
+		} else {
+			fmt.Println(out)
+		}
+	}
+*/
 package isclib
 
 // TODO: Consider making a pass through this entire library and using errwrap where appropriate

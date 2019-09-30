@@ -40,17 +40,27 @@ import (
 )
 
 const (
-	managerUserKey  = "security_settings.manager_user"
-	managerGroupKey = "security_settings.manager_group"
-	ownerUserKey    = "security_settings.cache_user"
-	ownerGroupKey   = "security_settings.cache_group"
+	irisKeyName             = "license.key"
+	cacheKeyName            = "cache.key"
+	primaryJournalPattern   = "CurrentDirectory=(.+)"
+	alternateJournalPattern = "AlternateDirectory=(.+)"
+	//regex to remove the [ ,1,,, etc. ] configuration on InterSystems DAT lines
+	extraInfoPattern = "(1+|,+)"
+	managerUserKey   = "security_settings.manager_user"
+	managerGroupKey  = "security_settings.manager_group"
+	ownerUserKey     = "security_settings.cache_user"
+	ownerGroupKey    = "security_settings.cache_group"
 	// DefaultImportQualifiers are the default ISC qualifiers used for importing source
 	DefaultImportQualifiers = "/compile/keepsource/expand/multicompile"
+	// CacheDatName is the common name for a Cache database file
+	CacheDatName = "CACHE.DAT"
+	// IrisDatName is the common name for a Iris database file
+	IrisDatName = "IRIS.DAT"
 )
 
 var (
 	// ErrLoadFailed is an error signifying that the loading of the source code failed
-	ErrLoadFailed = errors.New("Load did not appear to finish successfully")
+	ErrLoadFailed = errors.New("load did not appear to finish successfully")
 	getQlist      = qlist
 )
 
@@ -95,7 +105,7 @@ func (i *Instance) Update() error {
 func (i *Instance) UpdateFromQList(qlist string) (err error) {
 	qs := strings.Split(qlist, "^")
 	if len(qs) < 8 {
-		return fmt.Errorf("Insufficient pieces in qlist, need at least 8, qlist: %s", qlist)
+		return fmt.Errorf("insufficient pieces in qlist, need at least 8, qlist: %s", qlist)
 	}
 
 	if i.SuperServerPort, err = strconv.Atoi(qs[5]); err != nil {
@@ -166,8 +176,7 @@ func (i *Instance) DatInfo() (map[string]Dat, error) {
 	defer file.Close()
 	var inDbSection bool
 	var dats = make(map[string]Dat)
-	//regex to remove the [ ,1,,, etc. ] configuration on InterSystems DAT lines
-	re := regexp.MustCompile("(1+|,+)")
+	re := regexp.MustCompile(extraInfoPattern)
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -236,7 +245,7 @@ func (i *Instance) DeterminePrimaryJournalDirectory() (string, error) {
 	}
 	defer file.Close()
 
-	re, err := regexp.Compile("CurrentDirectory=(.+)")
+	re, err := regexp.Compile(primaryJournalPattern)
 	if err != nil {
 		return "", err
 	}
@@ -265,7 +274,7 @@ func (i *Instance) DetermineSecondaryJournalDirectory() (string, error) {
 	}
 	defer file.Close()
 
-	re, err := regexp.Compile("AlternateDirectory=(.+)")
+	re, err := regexp.Compile(alternateJournalPattern)
 	if err != nil {
 		return "", err
 	}
@@ -289,9 +298,9 @@ func (i *Instance) DetermineSecondaryJournalDirectory() (string, error) {
 func (i *Instance) DetermineISCDatFileName() string {
 	switch i.Product {
 	case Iris:
-		return "IRIS.DAT"
+		return IrisDatName
 	default:
-		return "CACHE.DAT"
+		return CacheDatName
 	}
 }
 
@@ -299,9 +308,9 @@ func (i *Instance) DetermineISCDatFileName() string {
 func (i *Instance) LicenseKeyFilePath() string {
 	switch i.Product {
 	case Iris:
-		return filepath.Join(i.DataDirectory, "mgr", "license.key")
+		return filepath.Join(i.DataDirectory, "mgr", irisKeyName)
 	default:
-		return filepath.Join(i.DataDirectory, "mgr", "cache.key")
+		return filepath.Join(i.DataDirectory, "mgr", cacheKeyName)
 	}
 }
 
@@ -311,16 +320,16 @@ func (i *Instance) Start() error {
 	// TODO: Think about a nozstu flag if there's a reason
 	if i.Status.Down() {
 		if output, err := exec.Command(i.controlPath(), "start", i.Name, "quietly").CombinedOutput(); err != nil {
-			return fmt.Errorf("Error starting instance, error: %s, output: %s", err, output)
+			return fmt.Errorf("error starting instance, error: %s, output: %s", err, output)
 		}
 	}
 
 	if err := i.Update(); err != nil {
-		return fmt.Errorf("Error refreshing instance state during start, error: %s", err)
+		return fmt.Errorf("error refreshing instance state during start, error: %s", err)
 	}
 
 	if !i.Status.Ready() {
-		return fmt.Errorf("Failed to start instance, name: %s, status: %s", i.Name, i.Status)
+		return fmt.Errorf("failed to start instance, name: %s, status: %s", i.Name, i.Status)
 	}
 
 	return nil
@@ -338,16 +347,16 @@ func (i *Instance) Stop() error {
 		}
 		args = append(args, "quietly")
 		if output, err := exec.Command(i.controlPath(), args...).CombinedOutput(); err != nil {
-			return fmt.Errorf("Error stopping instance, error: %s, output: %s", err, output)
+			return fmt.Errorf("error stopping instance, error: %s, output: %s", err, output)
 		}
 	}
 
 	if err := i.Update(); err != nil {
-		return fmt.Errorf("Error refreshing instance state during stop, error: %s", err)
+		return fmt.Errorf("error refreshing instance state during stop, error: %s", err)
 	}
 
 	if !i.Status.Down() {
-		return fmt.Errorf("Failed to stop instance, name: %s, status: %s", i.Name, i.Status)
+		return fmt.Errorf("failed to stop instance, name: %s, status: %s", i.Name, i.Status)
 	}
 
 	return nil
@@ -552,7 +561,7 @@ func (i *Instance) WaitForReadyWithInterval(ctx context.Context, interval time.D
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-time.After(interval):
-			i.Update()
+			_ = i.Update()
 			if i.Status.Ready() {
 				return nil
 			}
