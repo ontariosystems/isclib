@@ -48,7 +48,7 @@ nope
 `)
 			_, err := isclib.LoadParametersISC(r)
 			It("Returns an error", func() {
-				Expect(err).To(MatchError("Malformed parameter line: nope"))
+				Expect(err).To(MatchError("malformed parameter line: nope"))
 			})
 		})
 		Context("Valid data", func() {
