@@ -4,10 +4,10 @@
 # Not a prerequisite of lint becuase it takes a while
 lintinstall:
 	@go get -u github.com/alecthomas/gometalinter
-	@gometalinter --install --update
+	@gometalinter --install --no-vendored-linters
 
 lint:
-	@gometalinter ./...
+	@gometalinter --vendor ./...
 
 prep:
 	go get github.com/onsi/ginkgo/ginkgo
@@ -19,10 +19,10 @@ build:
 
 test:
 	mkdir -p test_results
-	GO15VENDOREXPERIMENT=1 ginkgo -r -cover
+	ginkgo -r -cover
 
 watch:
-	GO15VENDOREXPERIMENT=1 ginkgo watch -r -cover
+	ginkgo watch -r -cover
 
 cover:
 	go tool cover -html=isclib.coverprofile

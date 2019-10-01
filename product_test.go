@@ -23,20 +23,20 @@ import (
 )
 
 var _ = Describe("InstanceStatus", func() {
-	Context("ParseISCProduct", func() {
+	Context("ParseProduct", func() {
 		It("Returns a default product of Cache", func() {
-			Expect(isclib.ParseISCProduct("")).To(Equal(isclib.Cache), "default product")
-			Expect(isclib.ParseISCProduct("NotAProduct")).To(Equal(isclib.Cache), "default product")
+			Expect(isclib.ParseProduct("")).To(Equal(isclib.Cache), "default product")
+			Expect(isclib.ParseProduct("NotAProduct")).To(Equal(isclib.Cache), "default product")
 		})
 		It("Successfully parses Cache as a product", func() {
-			Expect(isclib.ParseISCProduct("Cache")).To(Equal(isclib.Cache), "Cache product")
+			Expect(isclib.ParseProduct("Cache")).To(Equal(isclib.Cache), "Cache product")
 		})
 		It("Successfully parses ISC product as a product", func() {
-			Expect(isclib.ParseISCProduct("Ensemble")).To(Equal(isclib.Ensemble), "Ensemble product")
+			Expect(isclib.ParseProduct("Ensemble")).To(Equal(isclib.Ensemble), "Ensemble product")
 		})
 		It("Successfully parses IRIS as a product", func() {
-			Expect(isclib.ParseISCProduct("IRIS")).To(Equal(isclib.Iris), "IRIS product")
-			Expect(isclib.ParseISCProduct("IDP")).To(Equal(isclib.Iris), "IRIS product")
+			Expect(isclib.ParseProduct("IRIS")).To(Equal(isclib.Iris), "IRIS product")
+			Expect(isclib.ParseProduct("IDP")).To(Equal(isclib.Iris), "IRIS product")
 		})
 	})
 })

@@ -14,6 +14,69 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+/*
+Package isclib facilitates managing and interacting with ISC products
+
+A simple example of checking for available ISC commands
+
+	package main
+
+	import (
+	    "github.com/ontariosystems/isclib"
+	)
+
+	func main() {
+	    if isclib.AvailableCommands().Has(isclib.CControlCommand) {
+	        // perform actions if Cache/Ensemble is installed
+	    }
+
+	    if isclib.AvailableCommands().Has(isclib.IrisCommand) {
+	        //perform actions if Iris is installed
+	    }
+	}
+
+You can get access to an instance, find information about the instance (installation directory, status, ports, version, etc.) and perform operations like starting/stopping the instance and executing code in a namespace
+
+A simple example of interacting with an instance by ensuring the instance is running and then printing the version
+
+	package main
+
+	import (
+		"bytes"
+		"fmt"
+
+		"github.com/ontariosystems/isclib"
+	)
+
+	const (
+		c = `MAIN
+ 	write $zversion
+ 	do $system.Process.Terminate($job,0)
+ 	quit
+
+	`
+	)
+
+	func main() {
+		i, err := isclib.LoadInstance("docker")
+		if err != nil {
+			panic(err)
+		}
+
+		if i.Status == "down" {
+			if err := i.Start(); err != nil {
+				panic(err)
+			}
+		}
+
+		r := bytes.NewReader([]byte(c))
+		if out, err := i.Execute("%SYS", r); err != nil {
+			panic(err)
+		} else {
+			fmt.Println(out)
+		}
+	}
+*/
 package isclib
 
 // TODO: Consider making a pass through this entire library and using errwrap where appropriate
@@ -21,15 +84,14 @@ package isclib
 import (
 	"bufio"
 	"bytes"
-	"os/exec"
-
-	log "github.com/sirupsen/logrus"
+	"fmt"
 )
 
 const (
 	defaultCControlPath = "ccontrol"
+	defaultIrisPath     = "iris"
 	defaultCSessionPath = "csession"
-	cacheParametersFile = "parameters.isc"
+	iscParametersFile   = "parameters.isc"
 )
 
 const (
@@ -55,7 +117,9 @@ EnsLibMain() public {
 
 var (
 	globalCControlPath        = defaultCControlPath
+	globalIrisPath            = defaultIrisPath
 	globalCSessionPath        = defaultCSessionPath
+	globalIrisSessionCommand  = fmt.Sprintf("%s session", defaultIrisPath)
 	executeTemporaryDirectory = "" // Default is system temp directory
 )
 
@@ -67,12 +131,28 @@ func SetCControlPath(path string) {
 	globalCControlPath = path
 }
 
+// IrisPath returns the current path to the iris executable
+func IrisPath() string { return globalIrisPath }
+
+// SetIrisPath sets the current path to the iris executable
+func SetIrisPath(path string) {
+	globalIrisPath = path
+}
+
 // CSessionPath returns the current path to the csession executable
 func CSessionPath() string { return globalCSessionPath }
 
 // SetCSessionPath sets the current path to the csession executable
 func SetCSessionPath(path string) {
 	globalCSessionPath = path
+}
+
+// IrisSessionCommand returns the current string for the iris session command
+func IrisSessionCommand() string { return globalIrisSessionCommand }
+
+// SetIrisSessionCommand sets the current string for the iris session command
+func SetIrisSessionCommand(path string) {
+	globalIrisSessionCommand = path
 }
 
 // ExecuteTemporaryDirectory returns the directory where temporary files for ObjectScript execution will be placed.
@@ -85,21 +165,6 @@ func ExecuteTemporaryDirectory() string {
 // Passing "" will result in using the system default temp directory.
 func SetExecuteTemporaryDirectory(path string) {
 	executeTemporaryDirectory = path
-}
-
-// ISCExists returns a boolean which is true when an ISC product or Caché instance exists on this system.
-func ISCExists() bool {
-	if _, err := exec.LookPath(globalCControlPath); err != nil {
-		log.WithField("ccontrolPath", globalCControlPath).WithError(err).Debug("ccontrol executable not found")
-		return false
-	}
-
-	if _, err := exec.LookPath(globalCSessionPath); err != nil {
-		log.WithField("csessionPath", globalCControlPath).WithError(err).Debug("csession executable not found")
-		return false
-	}
-
-	return true
 }
 
 // LoadInstances returns a listing of all Caché/Ensemble instances on this system.
@@ -139,8 +204,8 @@ func LoadInstance(name string) (*Instance, error) {
 	return InstanceFromQList(q)
 }
 
-// InstanceFromQList will parse the output of a ccontrol qlist into an Instance struct.
-// It expects the results of a ccontrol qlist for a single instance as a string.
+// InstanceFromQList will parse the output of a qlist into an Instance struct.
+// It expects the results of a qlist for a single instance as a string.
 // It returns the parsed instance and any error encountered.
 func InstanceFromQList(qlist string) (*Instance, error) {
 	i := new(Instance)

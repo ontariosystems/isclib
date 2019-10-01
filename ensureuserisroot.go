@@ -28,7 +28,7 @@ func ensureUserIsRoot() error {
 	}
 
 	if user.Uid != "0" {
-		return fmt.Errorf("Must be run as root")
+		return fmt.Errorf("must be run as root")
 	}
 
 	return nil

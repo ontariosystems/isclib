@@ -30,13 +30,13 @@ const (
 
 var (
 	// ErrTooManyRecursiveDirs is an error signifying too many ** are included in the glob pattern
-	ErrTooManyRecursiveDirs = errors.New("The glob must contain at most one **")
+	ErrTooManyRecursiveDirs = errors.New("the glob must contain at most one **")
 	// ErrMissingPathSeparator is an error signifying a missing path separator in the glob pattern
-	ErrMissingPathSeparator = errors.New("There must be a path separator between ** and file pattern")
+	ErrMissingPathSeparator = errors.New("there must be a path separator between ** and file pattern")
 	// ErrPathAfterRecursiveDirs is an error signifying that additional path information is included after the ** in the glob pattern
-	ErrPathAfterRecursiveDirs = errors.New("A ** must only be used as the last portion of the path before the file pattern")
+	ErrPathAfterRecursiveDirs = errors.New("a ** must only be used as the last portion of the path before the file pattern")
 	// ErrWildcardInDirectory is an error signifying that a wildcard has been included in the directory part of the glob pattern
-	ErrWildcardInDirectory = errors.New("The directory portion of the glob must not contain *")
+	ErrWildcardInDirectory = errors.New("the directory portion of the glob must not contain *")
 )
 
 // ImportDescription holds information needed for constructing a valid ISC $SYSTEM.OBJ.ImportDir command

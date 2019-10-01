@@ -6,3 +6,7 @@
 [![GoDoc](https://godoc.org/github.com/ontariosystems/isclib?status.svg)](https://godoc.org/github.com/ontariosystems/isclib)
 
 Go library for interacting with InterSystems Corporation products like Caché, Ensemble, and IRIS Data Platform
+
+It provides methods for determining if ISC products are installed and for interacting with instances of them
+
+Some example code can be found in the [GoDocs](https://godoc.org/github.com/ontariosystems/isclib)

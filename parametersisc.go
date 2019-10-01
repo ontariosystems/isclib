@@ -24,8 +24,12 @@ import (
 	"strings"
 )
 
+const (
+	parameterLinePattern = `^\s*(?:([^.]+)\.)?(.+):\s*(.*)$`
+)
+
 var (
-	parameterLineRegexp = regexp.MustCompile(`^\s*(?:([^.]+)\.)?(.+):\s*(.*)$`)
+	parameterLineRegexp = regexp.MustCompile(parameterLinePattern)
 )
 
 // ParametersISC represents the contents of the parameters ISC file
@@ -59,7 +63,7 @@ func LoadParametersISC(r io.Reader) (ParametersISC, error) {
 		}
 		m := parameterLineRegexp.FindStringSubmatch(t)
 		if len(m) != 4 {
-			return nil, fmt.Errorf("Malformed parameter line: %s", t)
+			return nil, fmt.Errorf("malformed parameter line: %s", t)
 		}
 
 		group := m[1]
