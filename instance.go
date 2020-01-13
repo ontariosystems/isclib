@@ -482,7 +482,8 @@ func (i *Instance) ExecuteWithOutput(namespace string, codeReader io.Reader, out
 
 	defer os.Remove(codePath)
 
-	if _, err := i.ImportSource(namespace, codePath, "/compile", "/keepsource"); err != nil {
+	if output, err := i.ImportSource(namespace, codePath, "/compile", "/keepsource"); err != nil {
+		elog.WithError(err).WithField("output", output).Error("unable to import")
 		return err
 	}
 
