@@ -587,6 +587,10 @@ func (i *Instance) genExecutorTmpFile(codeReader io.Reader) (path string, error 
 
 	defer tmpFile.Close()
 
+	if err := os.Chmod(tmpFile.Name(), 0644); err != nil {
+		return "", errwrap.Wrapf("Failed to set permissions on import file: {{err}}", err)
+	}
+
 	routineName := filepath.Base(tmpFile.Name())
 	if _, err := tmpFile.Write([]byte(fmt.Sprintf(importXMLHeader, routineName))); err != nil {
 		return "", errwrap.Wrapf("Failed to write XML header: {{err}}", err)
@@ -607,7 +611,7 @@ func (i *Instance) genExecutorTmpFile(codeReader io.Reader) (path string, error 
 			int(i.executionSysProcAttr.Credential.Uid),
 			int(i.executionSysProcAttr.Credential.Gid),
 		); err != nil {
-			return "", errwrap.Wrapf("Failed to set permissions on import file: {{err}}", err)
+			return "", errwrap.Wrapf("Failed to set ownership on import file: {{err}}", err)
 		}
 	}
 
