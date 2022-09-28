@@ -317,12 +317,13 @@ func (i *Instance) Start() error {
 	// TODO: Think about a nozstu flag if there's a reason
 	if i.Status.Down() {
 		if output, err := exec.Command(i.controlPath(), "start", i.Name, "quietly").CombinedOutput(); err != nil {
-			return fmt.Errorf("error starting instance, error: %s, output: %s", err, output)
+			log.WithError(err).WithFields(log.Fields{"output": string(output), "instance": i.Name}).Debug("Error start quietly")
+			return fmt.Errorf("error starting instance, error: %w", err)
 		}
 	}
 
 	if err := i.Update(); err != nil {
-		return fmt.Errorf("error refreshing instance state during start, error: %s", err)
+		return fmt.Errorf("error refreshing instance state during start, error: %w", err)
 	}
 
 	if !i.Status.Ready() {
@@ -344,12 +345,13 @@ func (i *Instance) Stop() error {
 		}
 		args = append(args, "quietly")
 		if output, err := exec.Command(i.controlPath(), args...).CombinedOutput(); err != nil {
-			return fmt.Errorf("error stopping instance, error: %s, output: %s", err, output)
+			ilog.WithError(err).WithFields(log.Fields{"output": string(output), "args": args}).Debug("Error stopping")
+			return fmt.Errorf("error stopping instance, error: %w", err)
 		}
 	}
 
 	if err := i.Update(); err != nil {
-		return fmt.Errorf("error refreshing instance state during stop, error: %s", err)
+		return fmt.Errorf("error refreshing instance state during stop, error: %w", err)
 	}
 
 	if !i.Status.Down() {
@@ -434,14 +436,17 @@ func (i *Instance) ImportSource(namespace, sourcePathGlob string, qualifiers ...
 	}
 
 	cmd := id.String()
-	log.WithFields(log.Fields{
+	l := log.WithFields(log.Fields{
+		"instance":   i.Name,
 		"namespace":  namespace,
 		"path":       sourcePathGlob,
 		"qualifiers": qstr,
 		"command":    cmd,
-	}).Debug("Attempting to import source")
+	})
+	l.Debug("Attempting to import source")
 	o, err := i.SessionCommand(namespace, cmd).CombinedOutput()
 	out := string(o)
+	l.WithField("output", out).Debug("import command result")
 	if err != nil {
 		return out, err
 	}
@@ -525,6 +530,7 @@ func (i *Instance) SessionCommand(namespace, command string) *exec.Cmd {
 		sc = scp[0]
 		args = append(scp[1:], args...)
 	}
+	log.WithFields(log.Fields{"instance": i.Name, "cmd": sc, "args": args}).Debug("session command")
 	cmd := exec.Command(sc, args...)
 	if i.executionSysProcAttr != nil {
 		cmd.SysProcAttr = i.executionSysProcAttr

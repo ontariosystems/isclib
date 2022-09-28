@@ -3,15 +3,13 @@
 
 # Not a prerequisite of lint because it takes a while
 lintinstall:
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
 lint:
 	@golangci-lint run
 
 prep:
 	go install github.com/onsi/ginkgo/v2/ginkgo@latest
-	go get github.com/onsi/gomega
-	go get ./...
 
 build:
 	go build

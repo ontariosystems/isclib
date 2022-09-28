@@ -17,8 +17,11 @@ limitations under the License.
 package isclib
 
 import (
+	"fmt"
 	"os/exec"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // qlist returns the results of executing qlist for the specified instance.
@@ -47,7 +50,8 @@ func qlist(instanceName string) (string, error) {
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", err
+		log.WithError(err).WithFields(log.Fields{"output": string(out), "command": cmd.Path, "args": cmd.Args}).Debug("Error running qlist")
+		return "", fmt.Errorf("error running qlist: %w", err)
 	}
 
 	return strings.TrimSpace(string(out)), nil
