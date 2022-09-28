@@ -23,7 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/user"
@@ -33,8 +32,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
-	"github.com/hashicorp/errwrap"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -417,10 +414,12 @@ func (i *Instance) ExecuteAsUser(execUser string) error {
 
 // ImportSource will import the source specified using a glob pattern into Caché with the provided qualifiers.
 // sourcePathGlob only allows a subset of glob patterns.  It must be in the format /p/a/t/h/**/*.xml
-//   /p/a/t/h/ is the import directory
-//   you have have at most one **
-//   after the ** you must have only a file pattern
-//   To import a single file it would be /a/b/c/file.xml
+//
+//	/p/a/t/h/ is the import directory
+//	you have have at most one **
+//	after the ** you must have only a file pattern
+//	To import a single file it would be /a/b/c/file.xml
+//
 // qualifiers are standard Caché import/compile qualifiers, if none are provided a default set will be used
 // It returns any output of the import and any error encountered.
 func (i *Instance) ImportSource(namespace, sourcePathGlob string, qualifiers ...string) (string, error) {
@@ -461,6 +460,7 @@ func (i *Instance) ImportSource(namespace, sourcePathGlob string, qualifiers ...
 //   - Non-labels start with a single space
 //   - You may not have blank lines internal to the code
 //   - You must have a single blank line at the end of the script
+//
 // It returns any output of the execution and any error encountered.
 func (i *Instance) Execute(namespace string, codeReader io.Reader) (string, error) {
 	var out bytes.Buffer
@@ -488,7 +488,11 @@ func (i *Instance) ExecuteWithOutput(namespace string, codeReader io.Reader, out
 	}
 
 	routineName := filepath.Base(codePath)
-	defer i.removeTempRoutine(namespace, routineName)
+	defer func() {
+		if err := i.removeTempRoutine(namespace, routineName); err != nil {
+			log.WithError(err).Error("Failed to remove temp routine")
+		}
+	}()
 
 	cmd := i.SessionCommand(namespace, "EnsLibMain^"+routineName)
 
@@ -580,7 +584,7 @@ func qlistStatus(statusAndTime string) (InstanceStatus, string) {
 }
 
 func (i *Instance) genExecutorTmpFile(codeReader io.Reader) (path string, error error) {
-	tmpFile, err := ioutil.TempFile(executeTemporaryDirectory, "ELEXEC")
+	tmpFile, err := os.CreateTemp(executeTemporaryDirectory, "ELEXEC")
 	if err != nil {
 		return "", err
 	}
@@ -588,12 +592,12 @@ func (i *Instance) genExecutorTmpFile(codeReader io.Reader) (path string, error 
 	defer tmpFile.Close()
 
 	if err := os.Chmod(tmpFile.Name(), 0644); err != nil {
-		return "", errwrap.Wrapf("Failed to set permissions on import file: {{err}}", err)
+		return "", fmt.Errorf("failed to set permissions on import file: %w", err)
 	}
 
 	routineName := filepath.Base(tmpFile.Name())
 	if _, err := tmpFile.Write([]byte(fmt.Sprintf(importXMLHeader, routineName))); err != nil {
-		return "", errwrap.Wrapf("Failed to write XML header: {{err}}", err)
+		return "", fmt.Errorf("failed to write XML header: %w", err)
 	}
 
 	if _, err := io.Copy(tmpFile, codeReader); err != nil {
@@ -601,7 +605,7 @@ func (i *Instance) genExecutorTmpFile(codeReader io.Reader) (path string, error 
 	}
 
 	if _, err := tmpFile.Write([]byte(importXMLFooter)); err != nil {
-		return "", errwrap.Wrapf("Failed to write XML footer: {{err}}", err)
+		return "", fmt.Errorf("failed to write XML footer: %w", err)
 	}
 
 	// Need to set the permissions here or the file will be owned by root and the execution will fail
@@ -611,7 +615,7 @@ func (i *Instance) genExecutorTmpFile(codeReader io.Reader) (path string, error 
 			int(i.executionSysProcAttr.Credential.Uid),
 			int(i.executionSysProcAttr.Credential.Gid),
 		); err != nil {
-			return "", errwrap.Wrapf("Failed to set ownership on import file: {{err}}", err)
+			return "", fmt.Errorf("failed to set ownership on import file: %w", err)
 		}
 	}
 
@@ -675,12 +679,12 @@ func (i *Instance) removeTempRoutine(namespace, path string) error {
 	cmd := i.SessionCommand(namespace, fmt.Sprintf(`##class(%%Routine).Delete("%s",0,1)`, routineName))
 	if err := cmd.Start(); err != nil {
 		l.WithError(err).Error("Failed to start deletion")
-		return errwrap.Wrapf("Failed to start routine deletion: {{err}}", err)
+		return fmt.Errorf("failed to start routine deletion: %w", err)
 	}
 
 	if err := cmd.Wait(); err != nil {
 		l.WithError(err).Error("Failed to delete routine")
-		return errwrap.Wrapf("Failed to execute routine deletion: {{err}}", err)
+		return fmt.Errorf("failed to execute routine deletion: %w", err)
 	}
 
 	return nil

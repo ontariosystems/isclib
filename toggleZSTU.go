@@ -75,7 +75,9 @@ func ToggleZSTU(cpfFilePath string, onOrOff bool) (originalValue bool, err error
 		return originalValue, err
 	}
 
-	FS.Remove(tmpFile.Name())
+	if err := FS.Remove(tmpFile.Name()); err != nil {
+		return originalValue, err
+	}
 
 	return originalValue, nil
 }
@@ -91,17 +93,23 @@ func parseAndWriteCPF(cpfFile io.Reader, tmpFile io.Writer, onOrOff bool) (origi
 				originalValue = false
 			}
 			if onOrOff {
-				io.WriteString(tmpFile, "ZSTU=1\n")
+				if _, err = io.WriteString(tmpFile, "ZSTU=1\n"); err != nil {
+					return
+				}
 			} else {
-				io.WriteString(tmpFile, "ZSTU=0\n")
+				if _, err = io.WriteString(tmpFile, "ZSTU=0\n"); err != nil {
+					return
+				}
 			}
 		} else {
-			io.WriteString(tmpFile, scanner.Text()+"\n")
+			if _, err = io.WriteString(tmpFile, scanner.Text()+"\n"); err != nil {
+				return
+			}
 		}
 	}
-	if err := scanner.Err(); err != nil {
-		return originalValue, err
+	if err = scanner.Err(); err != nil {
+		return
 	}
 
-	return originalValue, nil
+	return
 }

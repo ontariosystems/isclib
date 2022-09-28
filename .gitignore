@@ -1,4 +1,5 @@
 .idea
 *.coverprofile
+coverprofile.out
 test_results/
 vendor/

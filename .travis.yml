@@ -1,5 +1,6 @@
 language: go
 go:
-  - "1.12"
-  - "1.13"
+  - "1.17"
+  - "1.18"
+  - "1.19"
 script: make prep test

@@ -17,9 +17,9 @@ limitations under the License.
 package isclib_test
 
 import (
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/ontariosystems/isclib"
+	"github.com/ontariosystems/isclib/v2"
 )
 
 var _ = Describe("InstanceStatus", func() {

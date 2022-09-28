@@ -22,7 +22,7 @@ A simple example of checking for available ISC commands
 	package main
 
 	import (
-	    "github.com/ontariosystems/isclib"
+	    "github.com/ontariosystems/isclib/v2"
 	)
 
 	func main() {
@@ -39,47 +39,47 @@ You can get access to an instance, find information about the instance (installa
 
 A simple example of interacting with an instance by ensuring the instance is running and then printing the version
 
-	package main
+		package main
 
-	import (
-		"bytes"
-		"fmt"
+		import (
+			"bytes"
+			"fmt"
 
-		"github.com/ontariosystems/isclib"
-	)
+			"github.com/ontariosystems/isclib/v2"
+		)
 
-	const (
-		c = `MAIN
- 	write $zversion
- 	do $system.Process.Terminate($job,0)
- 	quit
+		const (
+			c = `MAIN
+	 	write $zversion
+	 	do $system.Process.Terminate($job,0)
+	 	quit
 
-	`
-	)
+		`
+		)
 
-	func main() {
-		i, err := isclib.LoadInstance("docker")
-		if err != nil {
-			panic(err)
-		}
-
-		if i.Status == "down" {
-			if err := i.Start(); err != nil {
+		func main() {
+			i, err := isclib.LoadInstance("docker")
+			if err != nil {
 				panic(err)
 			}
-		}
 
-		r := bytes.NewReader([]byte(c))
-		if out, err := i.Execute("%SYS", r); err != nil {
-			panic(err)
-		} else {
-			fmt.Println(out)
+			if i.Status == "down" {
+				if err := i.Start(); err != nil {
+					panic(err)
+				}
+			}
+
+			r := bytes.NewReader([]byte(c))
+			if out, err := i.Execute("%SYS", r); err != nil {
+				panic(err)
+			} else {
+				fmt.Println(out)
+			}
 		}
-	}
 */
 package isclib
 
-// TODO: Consider making a pass through this entire library and using errwrap where appropriate
+// TODO: Consider making a pass through this entire library and using fmt.Errorf to wrap errors where appropriate
 
 import (
 	"bufio"

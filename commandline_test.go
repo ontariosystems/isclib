@@ -17,13 +17,11 @@ limitations under the License.
 package isclib_test
 
 import (
-	"io/ioutil"
 	"os"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	"github.com/ontariosystems/isclib"
+	"github.com/ontariosystems/isclib/v2"
 )
 
 var _ = Describe("Commands", func() {
@@ -66,23 +64,29 @@ var _ = Describe("Commands", func() {
 		Context("With ISC executables", func() {
 			BeforeEach(func() {
 				var err error
-				if tempCControlCommand, err = ioutil.TempFile(os.TempDir(), "ccontrol"); err != nil {
+				if tempCControlCommand, err = os.CreateTemp(os.TempDir(), "ccontrol"); err != nil {
 					panic(err)
 				}
-				os.Chmod(tempCControlCommand.Name(), 0755)
-				if tempCSessionCommand, err = ioutil.TempFile(os.TempDir(), "csession"); err != nil {
+				err = os.Chmod(tempCControlCommand.Name(), 0755)
+				Expect(err).ToNot(HaveOccurred())
+				if tempCSessionCommand, err = os.CreateTemp(os.TempDir(), "csession"); err != nil {
 					panic(err)
 				}
-				os.Chmod(tempCSessionCommand.Name(), 0755)
-				if tempIrisCommand, err = ioutil.TempFile(os.TempDir(), "iris"); err != nil {
+				err = os.Chmod(tempCSessionCommand.Name(), 0755)
+				Expect(err).ToNot(HaveOccurred())
+				if tempIrisCommand, err = os.CreateTemp(os.TempDir(), "iris"); err != nil {
 					panic(err)
 				}
-				os.Chmod(tempIrisCommand.Name(), 0755)
+				err = os.Chmod(tempIrisCommand.Name(), 0755)
+				Expect(err).ToNot(HaveOccurred())
 			})
 			AfterEach(func() {
-				os.Remove(tempCControlCommand.Name())
-				os.Remove(tempCSessionCommand.Name())
-				os.Remove(tempIrisCommand.Name())
+				err := os.Remove(tempCControlCommand.Name())
+				Expect(err).ToNot(HaveOccurred())
+				err = os.Remove(tempCSessionCommand.Name())
+				Expect(err).ToNot(HaveOccurred())
+				err = os.Remove(tempIrisCommand.Name())
+				Expect(err).ToNot(HaveOccurred())
 			})
 			Context("only iris", func() {
 				BeforeEach(func() {

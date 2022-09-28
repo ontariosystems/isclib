@@ -19,14 +19,11 @@ package isclib_test
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/reporters"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 func TestEnsLib(t *testing.T) {
 	RegisterFailHandler(Fail)
-
-	junitReporter := reporters.NewJUnitReporter("./test_results/junit-isclib.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "isclib", []Reporter{junitReporter})
+	RunSpecs(t, "isclib")
 }

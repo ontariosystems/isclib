@@ -19,9 +19,9 @@ package isclib_test
 import (
 	"path/filepath"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/ontariosystems/isclib"
+	. "github.com/ontariosystems/isclib/v2"
 	"github.com/spf13/afero"
 )
 
@@ -34,7 +34,8 @@ var _ = Describe("ToggleZSTU", func() {
 
 	BeforeEach(func() {
 		FS = new(afero.MemMapFs)
-		FS.MkdirAll(filepath.Dir(path), 0755)
+		err := FS.MkdirAll(filepath.Dir(path), 0755)
+		Expect(err).ToNot(HaveOccurred())
 	})
 
 	Context("with ZSTU=0", func() {
