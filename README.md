@@ -3,10 +3,10 @@
 [![CLA assistant](https://cla-assistant.io/readme/badge/ontariosystems/isclib)](https://cla-assistant.io/ontariosystems/isclib)
 [![Build Status](https://github.com/ontariosystems/isclib/actions/workflows/test.yml/badge.svg)](https://github.com/ontariosystems/isclib/actions/workflows/test.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/ontariosystems/isclib)](https://goreportcard.com/report/github.com/ontariosystems/isclib)
-[![GoDoc](https://godoc.org/github.com/ontariosystems/isclib?status.svg)](https://godoc.org/github.com/ontariosystems/isclib)
+[![GoDoc](https://godoc.org/github.com/ontariosystems/isclib/v2?status.svg)](https://godoc.org/github.com/ontariosystems/isclib/v2)
 
 Go library for interacting with InterSystems Corporation products like Caché, Ensemble, and IRIS Data Platform
 
 It provides methods for determining if ISC products are installed and for interacting with instances of them
 
-Some example code can be found in the [GoDocs](https://godoc.org/github.com/ontariosystems/isclib)
+Some example code can be found in the [GoDocs](https://godoc.org/github.com/ontariosystems/isclib/v2)
