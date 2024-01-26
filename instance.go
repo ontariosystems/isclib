@@ -385,7 +385,12 @@ func (i *Instance) ExecuteAsManager() error {
 // This command only functions if the calling program is running as root.
 // It returns any error encountered.
 func (i *Instance) ExecuteAsUser(execUser string) error {
-	if err := ensureUserIsRoot(); err != nil {
+	// no need to switch users if we're already who we want to be
+	if err := checkUser(execUser); err == nil {
+		return nil
+	}
+
+	if err := checkUser("root"); err != nil {
 		return err
 	}
 

@@ -21,14 +21,19 @@ import (
 	"os/user"
 )
 
-func ensureUserIsRoot() error {
-	user, err := user.Current()
+func checkUser(username string) error {
+	cur, err := user.Current()
 	if err != nil {
 		return err
 	}
 
-	if user.Uid != "0" {
-		return fmt.Errorf("must be run as root")
+	other, err := user.Lookup(username)
+	if err != nil {
+		return err
+	}
+
+	if cur.Uid != other.Uid {
+		return fmt.Errorf("must be run as %s", username)
 	}
 
 	return nil
