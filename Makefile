@@ -16,7 +16,7 @@ build:
 
 test:
 	mkdir -p test_results
-	ginkgo -r -cover --junit-report test_results/junit-isclib.xml
+	go run github.com/onsi/ginkgo/v2/ginkgo -r -cover --junit-report test_results/junit-isclib.xml
 
 watch:
 	ginkgo watch -r -cover

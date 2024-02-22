@@ -42,11 +42,13 @@ const (
 	primaryJournalPattern   = "CurrentDirectory=(.+)"
 	alternateJournalPattern = "AlternateDirectory=(.+)"
 	//regex to remove the [ ,1,,, etc. ] configuration on InterSystems DAT lines
-	extraInfoPattern = "(1+|,+)"
-	managerUserKey   = "security_settings.manager_user"
-	managerGroupKey  = "security_settings.manager_group"
-	ownerUserKey     = "security_settings.cache_user"
-	ownerGroupKey    = "security_settings.cache_group"
+	extraInfoPattern  = "(1+|,+)"
+	managerUserKey    = "security_settings.manager_user"
+	managerGroupKey   = "security_settings.manager_group"
+	ownerUserKey      = "security_settings.cache_user"
+	ownerGroupKey     = "security_settings.cache_group"
+	irisOwnerUserKey  = "security_settings.iris_user"
+	irisOwnerGroupKey = "security_settings.iris_group"
 	// DefaultImportQualifiers are the default ISC qualifiers used for importing source
 	DefaultImportQualifiers = "/compile/keepsource/expand/multicompile"
 	// CacheDatName is the common name for a Cache database file
@@ -230,7 +232,12 @@ func (i *Instance) DetermineManager() (string, string, error) {
 // The owner is the user which owns the files from the installers and as who most Caché processes will be running.
 // It returns the owner and owner group as strings and any error encountered.
 func (i *Instance) DetermineOwner() (string, string, error) {
-	return i.getUserAndGroupFromParameters("Owner", ownerUserKey, ownerGroupKey)
+	switch i.Product {
+	case Iris:
+		return i.getUserAndGroupFromParameters("Owner", irisOwnerUserKey, irisOwnerGroupKey)
+	default:
+		return i.getUserAndGroupFromParameters("Owner", ownerUserKey, ownerGroupKey)
+	}
 }
 
 // DeterminePrimaryJournalDirectory will parse the ISC instance's CPF file for its primary journal directory (CurrentDirectory).
