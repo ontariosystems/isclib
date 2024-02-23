@@ -170,7 +170,7 @@ func SetExecuteTemporaryDirectory(path string) {
 // LoadInstances returns a listing of all Caché/Ensemble instances on this system.
 // It returns the list of instances and any error encountered.
 func LoadInstances() (Instances, error) {
-	qs, err := qlist("")
+	qs, err := qlist("", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -194,14 +194,15 @@ func LoadInstances() (Instances, error) {
 }
 
 // LoadInstance retrieves a single instance by name.
-// The instance name is case insensitive.
+// The instance name is case-insensitive.
 // It returns the instance and any error encountered.
 func LoadInstance(name string) (*Instance, error) {
-	q, err := qlist(name)
-	if err != nil {
+	i := &Instance{Name: name}
+	if err := i.Update(); err != nil {
 		return nil, err
 	}
-	return InstanceFromQList(q)
+
+	return i, nil
 }
 
 // InstanceFromQList will parse the output of a qlist into an Instance struct.
@@ -211,6 +212,14 @@ func InstanceFromQList(qlist string) (*Instance, error) {
 	i := new(Instance)
 	if err := i.UpdateFromQList(qlist); err != nil {
 		return nil, err
+	}
+
+	// if the status is unknown, we may be running as a different user,
+	// do the full update (running qlist again as the correct user)
+	if i.Status == InstanceStatusUnknown {
+		if err := i.Update(); err != nil {
+			return nil, err
+		}
 	}
 
 	return i, nil

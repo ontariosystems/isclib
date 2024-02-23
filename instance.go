@@ -59,8 +59,9 @@ const (
 
 var (
 	// ErrLoadFailed is an error signifying that the loading of the source code failed
-	ErrLoadFailed = errors.New("load did not appear to finish successfully")
-	getQlist      = qlist
+	ErrLoadFailed   = errors.New("load did not appear to finish successfully")
+	getQlist        = qlist
+	parameterReader = fileParameterReader
 )
 
 // An Instance represents an instance of Caché/Ensemble/Iris on the current system.
@@ -91,7 +92,29 @@ type Instance struct {
 // Update will query the the underlying instance and update the Instance fields with its current state.
 // It returns any error encountered.
 func (i *Instance) Update() error {
-	q, err := getQlist(i.Name)
+	procAttr, err := i.managerSysProc()
+	if err != nil {
+		return err
+	}
+
+	// if we didn't get a manager proc, try to update without it to find the manager
+	if procAttr == nil {
+		q, err := getQlist(i.Name, nil)
+		if err != nil {
+			return err
+		}
+
+		if err := i.UpdateFromQList(q); err != nil {
+			return err
+		}
+
+		procAttr, err = i.managerSysProc()
+		if err != nil {
+			return err
+		}
+	}
+
+	q, err := getQlist(i.Name, procAttr)
 	if err != nil {
 		return err
 	}
@@ -228,6 +251,32 @@ func (i *Instance) DetermineManager() (string, string, error) {
 	return i.getUserAndGroupFromParameters("Manager", managerUserKey, managerGroupKey)
 }
 
+// managerSysProc is used to run instance management commands as a different user (if the current user isn't the manager)
+func (i *Instance) managerSysProc() (*syscall.SysProcAttr, error) {
+	// can't find manager if we don't have a directory
+	if i.Directory == "" {
+		return nil, nil
+	}
+
+	mgr, _, err := i.DetermineManager()
+	if err != nil {
+		return nil, err
+	}
+
+	uid, gid, err := lookupUser(mgr)
+	if err != nil {
+		return nil, err
+	}
+
+	log.WithFields(log.Fields{"user": mgr, "uid": uid, "gid": gid}).Debug("instance manager sysproc")
+	return &syscall.SysProcAttr{
+		Credential: &syscall.Credential{
+			Uid: uint32(uid),
+			Gid: uint32(gid),
+		},
+	}, nil
+}
+
 // DetermineOwner will determine the owner of an instance by reader the parameters file associate with this instance.
 // The owner is the user which owns the files from the installers and as who most Caché processes will be running.
 // It returns the owner and owner group as strings and any error encountered.
@@ -323,7 +372,14 @@ func (i *Instance) LicenseKeyFilePath() string {
 func (i *Instance) Start() error {
 	// TODO: Think about a nozstu flag if there's a reason
 	if i.Status.Down() {
-		if output, err := exec.Command(i.controlPath(), "start", i.Name, "quietly").CombinedOutput(); err != nil {
+		cmd := exec.Command(i.controlPath(), "start", i.Name, "quietly")
+		procAttr, err := i.managerSysProc()
+		if err != nil {
+			return err
+		}
+
+		cmd.SysProcAttr = procAttr
+		if output, err := cmd.CombinedOutput(); err != nil {
 			log.WithError(err).WithFields(log.Fields{"output": string(output), "instance": i.Name}).Debug("Error start quietly")
 			return fmt.Errorf("error starting instance, error: %w", err)
 		}
@@ -351,7 +407,13 @@ func (i *Instance) Stop() error {
 			args = append(args, "bypass")
 		}
 		args = append(args, "quietly")
-		if output, err := exec.Command(i.controlPath(), args...).CombinedOutput(); err != nil {
+		cmd := exec.Command(i.controlPath(), args...)
+		procAttr, err := i.managerSysProc()
+		if err != nil {
+			return err
+		}
+		cmd.SysProcAttr = procAttr
+		if output, err := cmd.CombinedOutput(); err != nil {
 			ilog.WithError(err).WithFields(log.Fields{"output": string(output), "args": args}).Debug("Error stopping")
 			return fmt.Errorf("error stopping instance, error: %w", err)
 		}
@@ -401,22 +463,12 @@ func (i *Instance) ExecuteAsUser(execUser string) error {
 		return err
 	}
 
-	u, err := user.Lookup(execUser)
+	uid, gid, err := lookupUser(execUser)
 	if err != nil {
 		return err
 	}
 
-	uid, err := strconv.ParseUint(u.Uid, 10, 32)
-	if err != nil {
-		return err
-	}
-
-	gid, err := strconv.ParseUint(u.Gid, 10, 32)
-	if err != nil {
-		return err
-	}
-
-	log.WithFields(log.Fields{"user": execUser, "uid": u.Uid, "gid": u.Gid}).Debug("Configured to execute as alternate user")
+	log.WithFields(log.Fields{"user": execUser, "uid": uid, "gid": gid}).Debug("Configured to execute as alternate user")
 	i.executionSysProcAttr = &syscall.SysProcAttr{
 		Credential: &syscall.Credential{
 			Uid: uint32(uid),
@@ -424,6 +476,23 @@ func (i *Instance) ExecuteAsUser(execUser string) error {
 		},
 	}
 	return nil
+}
+
+func lookupUser(execUser string) (uid, gid uint64, err error) {
+	var u *user.User
+	u, err = user.Lookup(execUser)
+	if err != nil {
+		return
+	}
+
+	uid, err = strconv.ParseUint(u.Uid, 10, 32)
+	if err != nil {
+		return
+	}
+
+	gid, err = strconv.ParseUint(u.Gid, 10, 32)
+
+	return
 }
 
 // ImportSource will import the source specified using a glob pattern into Caché with the provided qualifiers.
@@ -562,14 +631,22 @@ func (i *Instance) ExecuteString(namespace string, code string) (string, error) 
 // ReadParametersISC will read the current instances parameters ISC file into a simple data structure.
 // It returns the ParametersISC data structure and any error encountered.
 func (i *Instance) ReadParametersISC() (ParametersISC, error) {
-	pfp := filepath.Join(i.Directory, iscParametersFile)
-	f, err := os.Open(pfp)
+	f, err := parameterReader(i.Directory, iscParametersFile)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
 	return LoadParametersISC(f)
+}
+
+func fileParameterReader(directory string, file string) (io.ReadCloser, error) {
+	pfp := filepath.Join(directory, file)
+	f, err := os.Open(pfp)
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
 }
 
 // WaitForReady waits indefinitely for an instance to be up and ready for use

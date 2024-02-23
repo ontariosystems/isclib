@@ -17,11 +17,16 @@ limitations under the License.
 package isclib
 
 import (
+	"bytes"
 	"context"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"fmt"
+	"io"
+	"os/user"
 	"syscall"
 	"time"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Instance", func() {
@@ -41,6 +46,24 @@ var _ = Describe("Instance", func() {
 		origCSessionCommand    string
 		origIrisSessionCommand string
 	)
+
+	BeforeEach(func() {
+		// make just enough of a parameters.isc to be able to find the manager user
+		parameterReader = func(directory string, file string) (io.ReadCloser, error) {
+			u, err := user.Current()
+			if err != nil {
+				return nil, err
+			}
+			g, err := user.LookupGroupId(u.Gid)
+			if err != nil {
+				return nil, err
+			}
+
+			parametersContent := fmt.Sprintf("security_settings.manager_user: %s\nsecurity_settings.manager_group: %s", u.Username, g.Name)
+			return io.NopCloser(bytes.NewBufferString(parametersContent)), nil
+		}
+	})
+
 	Describe("InstanceFromQList", func() {
 		Context("Invalid qlist", func() {
 			BeforeEach(func() {
@@ -396,11 +419,11 @@ var _ = Describe("Instance", func() {
 			Context("Does come up", func() {
 				BeforeEach(func() {
 					timeout = 500 * time.Millisecond
-					getQlist = func(instanceName string) (string, error) {
+					getQlist = func(instanceName string, _ *syscall.SysProcAttr) (string, error) {
 						return legacyqlist, nil
 					}
 					time.AfterFunc(timeout/2, func() {
-						getQlist = func(instanceName string) (string, error) {
+						getQlist = func(instanceName string, _ *syscall.SysProcAttr) (string, error) {
 							return durableqlist, nil
 						}
 					})

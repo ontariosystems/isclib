@@ -93,9 +93,11 @@ func LoadParametersISC(r io.Reader) (ParametersISC, error) {
 
 // Values will, given a set of identifiers making up a parameter key, return the values at that key
 // Identifiers can be...
-//  the full key (group.name)
-//  the group, name as two separate parameters
-//  A single parameter representing the name of a parameter in the "" group
+//
+//   - the full key (group.name)
+//   - the group, name as two separate parameters
+//   - A single parameter representing the name of a parameter in the "" group
+//
 // It returns the values at that key or an empty slice if it does not exist
 func (pi ParametersISC) Values(identifiers ...string) []string {
 	var group, name string
@@ -136,9 +138,11 @@ func (pi ParametersISC) Values(identifiers ...string) []string {
 
 // Value will, given a set of identifiers making up a parameter key, return the single value at that key
 // Identifiers can be...
-//  the full key (group.name)
-//  the group, name as two separate parameters
-//  A single parameter representing the name of a parameter in the "" group
+//
+// - the full key (group.name)
+// - the group, name as two separate parameters
+// - A single parameter representing the name of a parameter in the "" group
+//
 // It returns the value if a single value exists for the key or "" if it does not
 func (pi ParametersISC) Value(identifiers ...string) string {
 	values := pi.Values(identifiers...)

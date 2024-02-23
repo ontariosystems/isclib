@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"syscall"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -27,7 +28,8 @@ import (
 // qlist returns the results of executing qlist for the specified instance.
 // If instanceName is "", it will return the results of an argumentless qlist (which contains all instances)
 // It returns a string containing the combined standard input and output of the qlist command and any error which occurred.
-func qlist(instanceName string) (string, error) {
+// If procAttr is not nil, it uses it to switch to run qlist as a different user
+func qlist(instanceName string, procAttr *syscall.SysProcAttr) (string, error) {
 	// Example qlist output...
 	// DOCKER^/ensemble/instances/docker/^2015.2.2.805.0.16216^down, last used Fri May 13 18:12:33 2016^cache.cpf^56772^57772^62972^^
 	// DOCKER^/ensemble/instances/docker^2018.1.1.643.0^running, since Mon Jul 23 14:42:09 2018^iris.cpf^1972^57772^62972^ok^IRIS^^^/ensemble/instances/docker
@@ -48,6 +50,7 @@ func qlist(instanceName string) (string, error) {
 		return qlist, nil
 	}
 
+	cmd.SysProcAttr = procAttr
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		log.WithError(err).WithFields(log.Fields{"output": string(out), "command": cmd.Path, "args": cmd.Args}).Debug("Error running qlist")
