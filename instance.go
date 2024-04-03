@@ -263,18 +263,19 @@ func (i *Instance) managerSysProc() (*syscall.SysProcAttr, error) {
 		return nil, err
 	}
 
-	uid, gid, err := lookupUser(mgr)
+	sysProcAttr, err := switchUserSysProc(mgr)
 	if err != nil {
 		return nil, err
 	}
 
-	log.WithFields(log.Fields{"user": mgr, "uid": uid, "gid": gid}).Debug("instance manager sysproc")
-	return &syscall.SysProcAttr{
-		Credential: &syscall.Credential{
-			Uid: uint32(uid),
-			Gid: uint32(gid),
-		},
-	}, nil
+	if sysProcAttr != nil && sysProcAttr.Credential != nil {
+		log.WithFields(log.Fields{
+			"user": mgr,
+			"uid":  sysProcAttr.Credential.Uid,
+			"gid":  sysProcAttr.Credential.Gid,
+		}).Debug("instance manager sysproc")
+	}
+	return sysProcAttr, nil
 }
 
 // DetermineOwner will determine the owner of an instance by reader the parameters file associate with this instance.
@@ -454,28 +455,43 @@ func (i *Instance) ExecuteAsManager() error {
 // This command only functions if the calling program is running as root.
 // It returns any error encountered.
 func (i *Instance) ExecuteAsUser(execUser string) error {
+	sysProcAttr, err := switchUserSysProc(execUser)
+	if err != nil {
+		return err
+	}
+	if sysProcAttr != nil && sysProcAttr.Credential != nil {
+		log.WithFields(log.Fields{
+			"user": execUser,
+			"uid":  sysProcAttr.Credential.Uid,
+			"gid":  sysProcAttr.Credential.Gid,
+		}).Debug("Configured to execute as alternate user")
+	}
+	i.executionSysProcAttr = sysProcAttr
+	return nil
+}
+
+func switchUserSysProc(execUser string) (*syscall.SysProcAttr, error) {
 	// no need to switch users if we're already who we want to be
 	if err := checkUser(execUser); err == nil {
-		return nil
+		return &syscall.SysProcAttr{}, nil
 	}
 
+	// if we're not root, we won't be able to switch to someone else
 	if err := checkUser("root"); err != nil {
-		return err
+		return nil, err
 	}
 
 	uid, gid, err := lookupUser(execUser)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	log.WithFields(log.Fields{"user": execUser, "uid": uid, "gid": gid}).Debug("Configured to execute as alternate user")
-	i.executionSysProcAttr = &syscall.SysProcAttr{
+	return &syscall.SysProcAttr{
 		Credential: &syscall.Credential{
 			Uid: uint32(uid),
 			Gid: uint32(gid),
 		},
-	}
-	return nil
+	}, nil
 }
 
 func lookupUser(execUser string) (uid, gid uint64, err error) {

@@ -3,7 +3,7 @@ description: tests isclib
 inputs:
   go-version:
     description: "the version of golang"
-    default: '1.21'
+    default: '1.22'
 runs:
   using: composite
   steps:
