@@ -720,7 +720,7 @@ func (i *Instance) genExecutorTmpFile(codeReader io.Reader) (path string, error 
 	}
 
 	// Need to set the permissions here or the file will be owned by root and the execution will fail
-	if i.executionSysProcAttr != nil {
+	if i.executionSysProcAttr != nil && i.executionSysProcAttr.Credential != nil {
 		if err := os.Chown(
 			tmpFile.Name(),
 			int(i.executionSysProcAttr.Credential.Uid),
