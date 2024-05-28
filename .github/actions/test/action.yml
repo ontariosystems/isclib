@@ -10,5 +10,5 @@ runs:
     - uses: actions/setup-go@v5
       with:
         go-version: ${{ inputs.go-version }}
-    - run: make prep test
+    - run: make test
       shell: bash

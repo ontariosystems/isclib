@@ -8,9 +8,6 @@ lintinstall:
 lint:
 	@golangci-lint run
 
-prep:
-	go install github.com/onsi/ginkgo/v2/ginkgo@latest
-
 build:
 	go build
 
@@ -19,7 +16,7 @@ test:
 	go run github.com/onsi/ginkgo/v2/ginkgo -r -cover --junit-report test_results/junit-isclib.xml
 
 watch:
-	ginkgo watch -r -cover
+	go run github.com/onsi/ginkgo/v2/ginkgo watch -r -cover
 
 cover:
 	go tool cover -html=isclib.coverprofile

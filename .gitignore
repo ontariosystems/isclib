@@ -3,3 +3,4 @@
 coverprofile.out
 test_results/
 vendor/
+go.work*
