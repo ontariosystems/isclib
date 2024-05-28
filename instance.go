@@ -260,6 +260,11 @@ func (i *Instance) managerSysProc() (*syscall.SysProcAttr, error) {
 
 	mgr, _, err := i.DetermineManager()
 	if err != nil {
+		var pIscErr *ParametersISCNotExistError
+		if errors.As(err, &pIscErr) {
+			log.WithError(pIscErr).Debug("cannot determine manager")
+			return nil, nil
+		}
 		return nil, err
 	}
 
@@ -644,11 +649,27 @@ func (i *Instance) ExecuteString(namespace string, code string) (string, error) 
 	return i.Execute(namespace, b)
 }
 
+type ParametersISCNotExistError struct {
+	dir string
+	err error
+}
+
+func (e *ParametersISCNotExistError) Error() string {
+	return fmt.Sprintf("parameters.isc not found in %s. err: %s", e.dir, e.err.Error())
+}
+
+func (e *ParametersISCNotExistError) Unwrap() error {
+	return e.err
+}
+
 // ReadParametersISC will read the current instances parameters ISC file into a simple data structure.
 // It returns the ParametersISC data structure and any error encountered.
 func (i *Instance) ReadParametersISC() (ParametersISC, error) {
 	f, err := parameterReader(i.Directory, iscParametersFile)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, &ParametersISCNotExistError{dir: i.Directory, err: err}
+		}
 		return nil, err
 	}
 	defer f.Close()

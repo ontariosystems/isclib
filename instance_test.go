@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"os/user"
 	"syscall"
 	"time"
@@ -192,6 +193,7 @@ var _ = Describe("Instance", func() {
 			})
 		})
 	})
+
 	Describe("DetermineISCDatFileName", func() {
 		Context("The product is Cache", func() {
 			It("Returns the correct DAT filename", func() {
@@ -547,6 +549,25 @@ var _ = Describe("Instance", func() {
 				It("returns the default session command", func() {
 					Expect(instance.controlPath()).To(Equal(globalIrisPath))
 				})
+			})
+		})
+	})
+
+	Describe("Update", func() {
+		// To test instance updates when running somewhere that doesn't actually have access to the
+		// parameters.isc file, such as `iscenv` wrapping `csession` or `iris`
+		Context("Valid qlist without parameters.isc", func() {
+			BeforeEach(func() {
+				parameterReader = func(directory string, file string) (io.ReadCloser, error) {
+					return nil, os.ErrNotExist
+				}
+				instance, err = InstanceFromQList(cacheqlist)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("Does not return an error", func() {
+				err := instance.Update()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})
