@@ -26,6 +26,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -89,7 +90,7 @@ type Instance struct {
 	executionSysProcAttr *syscall.SysProcAttr // This is used internally to allow execution of Caché code as different users
 }
 
-// Update will query the the underlying instance and update the Instance fields with its current state.
+// Update will query the underlying instance and update the Instance fields with its current state.
 // It returns any error encountered.
 func (i *Instance) Update() error {
 	procAttr, err := i.managerSysProc()
@@ -260,7 +261,7 @@ func (i *Instance) managerSysProc() (*syscall.SysProcAttr, error) {
 
 	mgr, _, err := i.DetermineManager()
 	if err != nil {
-		var pIscErr *ParametersISCNotExistError
+		var pIscErr *ParametersISCError
 		if errors.As(err, &pIscErr) {
 			log.WithError(pIscErr).Debug("cannot determine manager")
 			return nil, nil
@@ -649,6 +650,18 @@ func (i *Instance) ExecuteString(namespace string, code string) (string, error) 
 	return i.Execute(namespace, b)
 }
 
+type ParametersISCError struct {
+	err error
+}
+
+func (e *ParametersISCError) Error() string {
+	return e.err.Error()
+}
+
+func (e *ParametersISCError) Unwrap() error {
+	return e.err
+}
+
 type ParametersISCNotExistError struct {
 	dir string
 	err error
@@ -668,7 +681,13 @@ func (i *Instance) ReadParametersISC() (ParametersISC, error) {
 	f, err := parameterReader(i.Directory, iscParametersFile)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return nil, &ParametersISCNotExistError{dir: i.Directory, err: err}
+			return nil, &ParametersISCError{&ParametersISCNotExistError{dir: i.Directory, err: err}}
+		}
+
+		if errors.Is(err, os.ErrPermission) {
+			return nil, &ParametersISCError{fmt.Errorf("permissions denied %s. Error [%w]",
+				path.Join(i.Directory, iscParametersFile),
+				err)}
 		}
 		return nil, err
 	}

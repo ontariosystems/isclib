@@ -32,6 +32,7 @@ import (
 
 var _ = Describe("Instance", func() {
 	const (
+		instanceName  = "INSTTEST"
 		cacheqlist    = "INSTTEST^/ensemble/instances/insttest/^2015.2.2.805.0.16216^running, since Fri May 13 22:07:02 2016^cache.cpf^56772^57772^62972^ok^"
 		durableqlist  = "INSTTEST^/ensemble/instances/insttest/^2015.2.2.805.0.16216^running, since Fri May 13 22:07:02 2016^cache.cpf^56772^57772^62972^ok^^^^/mgr/config"
 		ensembleqlist = "INSTTEST^/ensemble/instances/insttest/^2015.2.2.805.0.16216^running, since Fri May 13 22:07:02 2016^cache.cpf^56772^57772^62972^ok^Ensemble"
@@ -434,6 +435,9 @@ var _ = Describe("Instance", func() {
 					defer can()
 					err = instance.WaitForReady(ctx)
 				})
+				AfterEach(func() {
+					getQlist = qlist
+				})
 				It("Does not return an error", func() {
 					Expect(err).NotTo(HaveOccurred())
 				})
@@ -554,6 +558,16 @@ var _ = Describe("Instance", func() {
 	})
 
 	Describe("Update", func() {
+		BeforeEach(func() {
+			getQlist = func(instanceName string, _ *syscall.SysProcAttr) (string, error) {
+				return cacheqlist, nil
+			}
+			instance = &Instance{Name: instanceName}
+		})
+		AfterEach(func() {
+			getQlist = qlist
+		})
+
 		// To test instance updates when running somewhere that doesn't actually have access to the
 		// parameters.isc file, such as `iscenv` wrapping `csession` or `iris`
 		Context("Valid qlist without parameters.isc", func() {
@@ -561,8 +575,21 @@ var _ = Describe("Instance", func() {
 				parameterReader = func(directory string, file string) (io.ReadCloser, error) {
 					return nil, os.ErrNotExist
 				}
-				instance, err = InstanceFromQList(cacheqlist)
-				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("Does not return an error", func() {
+				err := instance.Update()
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		// For when the user doesn't have permissions to read parameters.isc, such as running as a
+		// non-owner user that is still a valid user in ISC instance
+		Context("Valid qlist but cannot read parameters.isc", func() {
+			BeforeEach(func() {
+				parameterReader = func(directory string, file string) (io.ReadCloser, error) {
+					return nil, os.ErrPermission
+				}
 			})
 
 			It("Does not return an error", func() {
