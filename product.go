@@ -30,7 +30,7 @@ const (
 	None Product = 0
 )
 
-// ParseProduct parses a string representing a ISC product into a Product.
+// ParseProduct parses a string representing an ISC product into a Product.
 // The default for unknown strings is Cache.
 func ParseProduct(product string) Product {
 	switch product {
@@ -40,7 +40,7 @@ func ParseProduct(product string) Product {
 		return Cache
 	case "Ensemble":
 		return Ensemble
-	case "IDP", "IRIS":
+	case "IDP", "IRIS", "IRISHealth":
 		return Iris
 	}
 }

@@ -36,6 +36,7 @@ var _ = Describe("InstanceStatus", func() {
 		})
 		It("Successfully parses IRIS as a product", func() {
 			Expect(isclib.ParseProduct("IRIS")).To(Equal(isclib.Iris), "IRIS product")
+			Expect(isclib.ParseProduct("IRISHealth")).To(Equal(isclib.Iris), "IRIS product")
 			Expect(isclib.ParseProduct("IDP")).To(Equal(isclib.Iris), "IRIS product")
 		})
 	})

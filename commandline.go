@@ -64,7 +64,7 @@ func AvailableCommands() Commands {
 	if _, err := exec.LookPath(globalCSessionPath); err == nil {
 		commands.Set(CSessionCommand)
 	} else {
-		log.WithField("csessionPath", globalCControlPath).WithError(err).Debug("csession executable not found")
+		log.WithField("csessionPath", globalCSessionPath).WithError(err).Debug("csession executable not found")
 	}
 
 	return commands
