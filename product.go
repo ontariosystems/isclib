@@ -40,7 +40,7 @@ func ParseProduct(product string) Product {
 		return Cache
 	case "Ensemble":
 		return Ensemble
-	case "IDP", "IRIS", "IRISHealth":
+	case "IDP", "IRIS", "IRISHealth", "HealthConnect":
 		return Iris
 	}
 }

@@ -38,6 +38,7 @@ var _ = Describe("InstanceStatus", func() {
 			Expect(isclib.ParseProduct("IRIS")).To(Equal(isclib.Iris), "IRIS product")
 			Expect(isclib.ParseProduct("IRISHealth")).To(Equal(isclib.Iris), "IRIS product")
 			Expect(isclib.ParseProduct("IDP")).To(Equal(isclib.Iris), "IRIS product")
+			Expect(isclib.ParseProduct("HealthConnect")).To(Equal(isclib.Iris), "IRIS product")
 		})
 	})
 })
